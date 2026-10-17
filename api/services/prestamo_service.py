@@ -148,52 +148,70 @@ class PrestamoService:
     # Devolución de Préstamo
     # ─────────────────────────────────────────────────────────────────────────
     def registrar_devolucion(
-        self,
-        prestamo_id: int,
-        estado_fisico_ejemplar: str = "Disponible",
-        tipo_estrategia_multa: str = "estandar",
-    ) -> Prestamo:
-        """
-        Registra la devolución de un préstamo.
-        Si hay retraso, genera una multa automáticamente usando la estrategia indicada.
-        Actualiza el estado del ejemplar según su condición física al momento de la devolución.
+            self,
+            prestamo_id: int,
+            estado_fisico_ejemplar: str = "Disponible",
+            tipo_estrategia_multa: str = "estandar",
+        ) -> Prestamo:
+            """
+            Registra la devolución de un préstamo.
+            Si hay retraso, genera una multa automáticamente usando la estrategia indicada.
+            Actualiza el estado del ejemplar según su condición física al momento de la devolución.
+            Valida que los préstamos interbibliotecarios tengan su remito en estado 'Recibido'.
 
-        Args:
-            prestamo_id: ID del préstamo a devolver.
-            estado_fisico_ejemplar: Estado físico del ejemplar devuelto.
-            tipo_estrategia_multa: Estrategia de cálculo de multa ('estandar', 'estudiante', etc.)
+            Args:
+                prestamo_id: ID del préstamo a devolver.
+                estado_fisico_ejemplar: Estado físico del ejemplar devuelto.
+                tipo_estrategia_multa: Estrategia de cálculo de multa ('estandar', 'estudiante', etc.)
 
-        Returns:
-            El préstamo actualizado.
-        """
-        prestamo = self.prestamo_dao.obtener_por_id(prestamo_id)
-        if not prestamo:
-            raise ValueError(f"No se encontró el préstamo con ID {prestamo_id}.")
-        if prestamo.estado != "Activo":
-            raise ValueError(
-                f"El préstamo {prestamo_id} no se encuentra activo. "
-                f"Estado actual: {prestamo.estado}."
+            Returns:
+                El préstamo actualizado.
+            """
+            prestamo = self.prestamo_dao.obtener_por_id(prestamo_id)
+            if not prestamo:
+                raise ValueError(f"No se encontró el préstamo con ID {prestamo_id}.")
+            if prestamo.estado != "Activo":
+                raise ValueError(
+                    f"El préstamo {prestamo_id} no se encuentra activo. "
+                    f"Estado actual: {prestamo.estado}."
+                )
+
+            # Validación de Préstamo Interbibliotecario: El remito debe estar en estado 'Recibido'
+            es_interbibliotecario = (
+                prestamo.sede_destino_id is not None 
+                and prestamo.sede_origen_id != prestamo.sede_destino_id
             )
+            if es_interbibliotecario:
+                remito = self.logistica_service.remito_dao.obtener_por_prestamo(prestamo.id)
+                if not remito:
+                    raise ValueError(
+                        f"El préstamo interbibliotecario #{prestamo.id} no posee un remito asociado."
+                    )
+                if remito.estado != "Recibido":
+                    raise ValueError(
+                        f"No se puede registrar la devolución: el remito asociado ({remito.codigo_remito}) "
+                        f"se encuentra en estado '{remito.estado}'. Debe estar en estado 'Recibido'."
+                    )
 
-        # Registrar la devolución
-        prestamo.fecha_devolucion_real = date.today()
-        prestamo.estado = "Devuelto"
+            # Registrar la devolución
+            prestamo.fecha_devolucion_real = date.today()
+            prestamo.estado = "Devuelto"
 
-        # Actualizar el estado físico del ejemplar devuelto
-        ejemplar = self.ejemplar_dao.obtener_por_id(prestamo.ejemplar_id)
-        if ejemplar:
-            ejemplar.estado_fisico = estado_fisico_ejemplar
+            # Actualizar el estado físico del ejemplar devuelto
+            ejemplar = self.ejemplar_dao.obtener_por_id(prestamo.ejemplar_id)
+            if ejemplar:
+                ejemplar.estado_fisico = estado_fisico_ejemplar
 
-        self.session.commit()
+            self.session.commit()
 
-        # SUP-01: Generar multa automáticamente si hay retraso
-        if prestamo.fecha_devolucion_real > prestamo.fecha_devolucion_estimada:
-            multa = self.multa_service.generar_multa(prestamo, tipo_estrategia_multa)
-            if multa:
-                # Inhabilitación automática del socio por deuda
-                socio = self.socio_dao.obtener_por_id(prestamo.socio_id)
-                if socio:
-                    socio.activo = 0
-                    self.session.commit()
+            # SUP-01: Generar multa automáticamente si hay retraso
+            if prestamo.fecha_devolucion_real > prestamo.fecha_devolucion_estimada:
+                multa = self.multa_service.generar_multa(prestamo, tipo_estrategia_multa)
+                if multa:
+                    # Inhabilitación automática del socio por deuda
+                    socio = self.socio_dao.obtener_por_id(prestamo.socio_id)
+                    if socio:
+                        socio.activo = 0
+                        self.session.commit()
 
-        return prestamo
+            return prestamo

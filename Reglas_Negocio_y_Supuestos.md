@@ -10,3 +10,4 @@
 ## 2. Supuestos del Dominio
 * **SUP-01 (Cálculo de Multas):** Las multas se generan automáticamente al registrar la devolución de un préstamo cuya fecha real supere a la fecha estimada de devolución, aplicando una tarifa diaria configurable.
 * **SUP-02 (Trazabilidad Logística):** Todo traslado interbibliotecario requiere de manera obligatoria la emisión de un remito cuyo ciclo de vida avanza mediante los estados: *Empaquetado -> Despachado -> Recibido*.
+* **SUP-03 (Restricción de Devolución Interbibliotecaria):** No se podrá registrar la devolución de un préstamo interbibliotecario hasta que el remito asociado se encuentre con estado "Recibido", garantizando así la trazabilidad y recepción física del ejemplar en la sede correspondiente.
