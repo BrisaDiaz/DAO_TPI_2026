@@ -14,7 +14,7 @@ from src.pages.socios_view import SociosView
 from src.pages.catalogo_view import CatalogoView
 from src.pages.prestamos_view import PrestamosView
 from src.pages.reportes_view import ReportesView
-
+from src.pages.reservas_view import ReservasView
 
 class MainWindow(tk.Tk):
     """Ventana principal del sistema de gestión de bibliotecas."""
@@ -153,6 +153,7 @@ class MainWindow(tk.Tk):
         self.vista_socios = SociosView(self.notebook, session=self.db_session)
         self.vista_catalogo = CatalogoView(self.notebook, session=self.db_session)
         self.vista_prestamos = PrestamosView(self.notebook, session=self.db_session)
+        self.vista_reservas = ReservasView(self.notebook, session=self.db_session)
         self.vista_reportes = ReportesView(self.notebook, session=self.db_session)
 
         # Agregar pestañas
@@ -160,6 +161,7 @@ class MainWindow(tk.Tk):
         self.notebook.add(self.vista_socios, text=" 👥 Socios ")
         self.notebook.add(self.vista_catalogo, text=" 📚 Catálogo ")
         self.notebook.add(self.vista_prestamos, text=" 🔄 Préstamos & Remitos ")
+        self.notebook.add(self.vista_reservas, text=" 📌 Reservas ")
         self.notebook.add(self.vista_reportes, text=" 📊 Informes & Estadísticas ")
 
         # 3. Barra de Estado inferior
