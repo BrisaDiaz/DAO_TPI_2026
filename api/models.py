@@ -244,18 +244,20 @@ class Reserva(Base):
     __tablename__ = "reservas"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    fecha_reserva: Mapped[date] = mapped_column(Date, default=date.today)
+    fecha_reserva: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     estado: Mapped[str] = mapped_column(
         String(20), default="Pendiente"
-    )  # Pendiente, Concretada, Cancelada
+    )  # Pendiente, Concretada, Cancelada, Caducada
 
     # Claves foráneas
     socio_id: Mapped[int] = mapped_column(ForeignKey("socios.id"), nullable=False)
     libro_id: Mapped[int] = mapped_column(ForeignKey("libros.id"), nullable=False)
+    sede_id: Mapped[int] = mapped_column(ForeignKey("sedes.id"), nullable=False)
 
     # Relaciones
     socio: Mapped["Socio"] = relationship(back_populates="reservas")
     libro: Mapped["Libro"] = relationship(back_populates="reservas")
+    sede: Mapped["Sede"] = relationship()
 
     def __repr__(self) -> str:
-        return f"<Reserva(id={self.id}, estado='{self.estado}', socio_id={self.socio_id})>"
+        return f"<Reserva(id={self.id}, estado='{self.estado}', socio_id={self.socio_id}, sede_id={self.sede_id})>"
