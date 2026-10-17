@@ -145,13 +145,20 @@ Si estás asistiendo en el desarrollo de este repositorio:
 
 ## 📌 Próximos Cambios (Roadmap)
 
-- [ ] **Desarrollo de Vistas en Tkinter (`src/pages/`):**
-  - [ ] `main_window.py`: Ventana principal con navegación por pestañas (`ttk.Notebook`).
-  - [ ] `sedes_view.py`: Alta, modificación y listado con estado de sedes.
-  - [ ] `socios_view.py`: Gestión de socios, panel de multas pendientes y botón de regularización/pago.
-  - [ ] `prestamos_view.py`: Formulario para registrar préstamos locales e interbibliotecarios con validación en vivo.
-  - [ ] `remitos_view.py`: Panel visual de seguimiento de envíos con botones interactivos para avanzar estados (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`).
-  - [ ] `reportes_view.py`: Visor tabular interactivo para los 4 reportes no triviales exigidos.
+- [] **Desarrollo de Vistas en Tkinter (`src/pages/`):**
+  - [X] `main_window.py`: Ventana principal con navegación por pestañas (`ttk.Notebook`).
+  - [X] `sedes_view.py`: Alta, modificación y listado con estado de sedes.
+  - [X] `socios_view.py`: Gestión de socios, panel de multas pendientes y botón de regularización/pago.
+  - [X] `prestamos_view.py`: Formulario para registrar préstamos locales e interbibliotecarios con validación en vivo.
+  - [X] `remitos_view.py`: Panel visual de seguimiento de envíos con botones interactivos para avanzar estados (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`).
+  - [X] `reportes_view.py`: Visor tabular interactivo para los 4 reportes no triviales exigidos.
+  - [ ] `reservas_view.py`: Interfaz para la gestión, alta, consulta y cancelación de reservas de material bibliográfico.
+- [ ] **Lógica de Negocio y Backend (`api/services/`):**
+  - [ ] `reserva_service.py`: Orquestador de reglas de negocio para la gestión de reservas, validación de stock no disponible y caducidad.
+  - [ ] Implementación y validación formal en servicios de los nuevos supuestos del dominio (`SUP-04` a `SUP-08`).
+  - [ ] Creación de un script o rutina de inicialización de datos (*seed* de datos iniciales) para poblar la base de datos con registros de prueba (sedes, autores, libros, ejemplares, socios y préstamos).
+- [ ] **Pruebas Automatizadas (`tests/`):**
+  - [ ] Creación de nuevas suites de prueba en Pytest para cubrir el servicio de reservas y la validación de los supuestos del dominio agregados.
 - [ ] **Componentes Reutilizables (`src/components/`):**
   - [ ] Grilla estándar (`ttk.Treeview`) con soporte para ordenamiento por columnas.
   - [ ] Modales de confirmación y captura de errores amigables.
