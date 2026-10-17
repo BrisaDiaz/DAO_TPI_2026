@@ -136,3 +136,16 @@ class MultaService:
             if socio and socio.activo == 0:
                 socio.activo = 1
                 self.session.commit()
+
+    def generar_multa_por_dano_o_extravio(self, prestamo: Prestamo, monto_fijo: float = 5000.0) -> Multa:
+        """
+        SUP-07: Genera automáticamente un cargo por reposición económica 
+        debido a la devolución de un ejemplar en estado 'Dañado' o 'Extraviado'.
+        """
+        multa = Multa(
+            monto=monto_fijo,
+            estado="Pendiente",
+            prestamo_id=prestamo.id,
+            socio_id=prestamo.socio_id,
+        )
+        return self.multa_dao.crear(multa)

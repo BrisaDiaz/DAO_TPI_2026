@@ -168,3 +168,24 @@ class TestMultaService:
         service.registrar_pago(multa.id)
         session.refresh(socio)
         assert socio.activo == 1
+        
+    def test_generar_multa_por_dano_o_extravio(self, session, datos_base):
+            """SUP-07: Un ejemplar dañado o extraviado debe generar un cargo fijo de reposición."""
+            prestamo = Prestamo(
+                socio_id=datos_base["socio"].id,
+                ejemplar_id=datos_base["ejemplar"].id,
+                sede_origen_id=datos_base["sede"].id,
+                fecha_devolucion_estimada=date.today() + timedelta(days=5),
+                estado="Activo",
+            )
+            session.add(prestamo)
+            session.commit()
+
+            service = MultaService(session)
+            multa = service.generar_multa_por_dano_o_extravio(prestamo, monto_fijo=5000.0)
+
+            assert multa is not None
+            assert multa.monto == 5000.0
+            assert multa.estado == "Pendiente"
+            assert multa.prestamo_id == prestamo.id
+            assert multa.socio_id == datos_base["socio"].id
