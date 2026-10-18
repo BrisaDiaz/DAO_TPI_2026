@@ -79,8 +79,8 @@ class ReporteService:
     # ─────────────────────────────────────────────────────────────────────────
     def reporte_vencidos_y_multas(self) -> List[Dict[str, Any]]:
         """
-        Retorna los préstamos activos cuya fecha de devolución estimada ya pasó,
-        con los días de retraso y el monto de multa acumulada.
+        Retorna el listado de multas y sanciones registradas en el sistema
+        (por retrasos, daños o extravíos), asociadas al socio y préstamo correspondiente.
         """
         hoy = date.today()
 
@@ -91,18 +91,18 @@ class ReporteService:
                 Socio.email,
                 Libro.titulo.label("titulo_libro"),
                 Prestamo.fecha_devolucion_estimada,
+                Multa.monto,
+                Multa.estado.label("estado_multa"),
                 case(
                     (Socio.activo == 0, "Inhabilitado (Deuda)"),
                     else_="Activo",
                 ).label("estado_cuenta"),
             )
-            .join(Socio, Prestamo.socio_id == Socio.id)
+            .join(Multa, Socio.id == Multa.socio_id)
+            .join(Prestamo, Multa.prestamo_id == Prestamo.id)
             .join(Ejemplar, Prestamo.ejemplar_id == Ejemplar.id)
             .join(Libro, Ejemplar.libro_id == Libro.id)
-            .filter(
-                Prestamo.estado == "Activo",
-                Prestamo.fecha_devolucion_estimada < hoy,
-            )
+            .filter(Multa.estado == "Pendiente") # Opcional: filtrar las pendientes o mostrarlas todas
             .all()
         )
 
@@ -112,9 +112,9 @@ class ReporteService:
                 "socio_nombre": r.socio_nombre,
                 "email": r.email,
                 "titulo_libro": r.titulo_libro,
-                "fecha_devolucion_estimada": str(r.fecha_devolucion_estimada),
-                "dias_retraso": (hoy - r.fecha_devolucion_estimada).days,
-                "multa_acumulada": (hoy - r.fecha_devolucion_estimada).days * 150.0,
+                "fecha_devolucion_estimada": str(r.fecha_devolucion_estimada) if r.fecha_devolucion_estimada else "-",
+                "dias_retraso": (hoy - r.fecha_devolucion_estimada).days if r.fecha_devolucion_estimada and hoy > r.fecha_devolucion_estimada else 0,
+                "multa_acumulada": float(r.monto),
                 "estado_cuenta": r.estado_cuenta,
             }
             for r in resultados
