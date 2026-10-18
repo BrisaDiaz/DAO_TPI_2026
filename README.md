@@ -159,8 +159,8 @@ Si estás asistiendo en el desarrollo de este repositorio:
   - [X] Creación de un script o rutina de inicialización de datos (*seed* de datos iniciales) para poblar la base de datos con registros de prueba (sedes, autores, libros, ejemplares, socios y préstamos).
 - [X] **Pruebas Automatizadas (`tests/`):**
   - [X] Creación de nuevas suites de prueba en Pytest para cubrir el servicio de reservas y la validación de los supuestos del dominio agregados.
-- [ ] **Componentes Reutilizables (`src/components/`):**
-  - [ ] Grilla estándar (`ttk.Treeview`) con soporte para ordenamiento por columnas.
+- [X] **Componentes Reutilizables (`src/components/`):**
+  - [X] Grilla estándar (`ttk.Treeview`) con soporte para ordenamiento por columnas.
   - [X] Modales de confirmación y captura de errores amigables.
 - [ ] **Opcionales del Dominio:**
   - [ ] Implementación del patrón **Observer** para notificaciones automáticas al liberar reservas.

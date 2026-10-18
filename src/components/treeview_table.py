@@ -4,6 +4,7 @@ Componente reutilizable de tabla basado en ttk.Treeview.
 Provee funcionalidades de ordenamiento por columnas, barras de desplazamiento,
 filas alternadas y callbacks de selección para todas las vistas del sistema.
 """
+from datetime import date, datetime
 import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -11,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 class TreeviewTable(ttk.Frame):
     """
-    Grilla tabular reutilizable con scrollbars y estilos configurados.
+    Grilla tabular reutilizable con scrollbars y soporte de ordenamiento por columna.
     """
 
     def __init__(
@@ -27,9 +28,11 @@ class TreeviewTable(ttk.Frame):
 
         self.columns_info = columns
         self.column_ids = [col[0] for col in columns]
+        self.titles_map = {col[0]: col[1] for col in columns}
         self.on_select_callback = on_select
         self.on_double_click_callback = on_double_click
         self._sort_reverse: Dict[str, bool] = {col[0]: False for col in columns}
+        self._last_sorted_col: Optional[str] = None
 
         self._crear_widgets(show_scrollbar_x)
 
@@ -47,7 +50,7 @@ class TreeviewTable(ttk.Frame):
         )
         self.tree.grid(row=0, column=0, sticky="nsew")
 
-        # Configurar columnas
+        # Configurar columnas y encabezados interactivos para ordenamiento
         for col_id, col_title, width in self.columns_info:
             self.tree.heading(
                 col_id,
@@ -76,22 +79,51 @@ class TreeviewTable(ttk.Frame):
         if self.on_double_click_callback:
             self.tree.bind("<Double-1>", self._on_treeview_double_click)
 
+    def _parse_value(self, val: Any) -> Any:
+        """Convierte valores a tipos comparables (números, fechas o cadenas)."""
+        val_str = str(val).strip()
+        if not val_str or val_str == "-":
+            return ""
+
+        # Intentar parsear número/moneda
+        try:
+            cleaned_num = val_str.replace("$", "").replace(".", "").replace(",", ".").strip()
+            return float(cleaned_num)
+        except ValueError:
+            pass
+
+        # Intentar parsear fecha (AAAA-MM-DD)
+        try:
+            return datetime.strptime(val_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+        return val_str.lower()
+
     def _ordenar_por_columna(self, col_id: str) -> None:
         """Ordena los elementos de la tabla al hacer clic en el encabezado."""
         items = [(self.tree.set(k, col_id), k) for k in self.tree.get_children("")]
+        reverse = self._sort_reverse[col_id]
 
-        # Intentar ordenar como número si es posible, sino como texto
-        try:
-            items.sort(key=lambda t: float(t[0].replace("$", "").replace(".", "").replace(",", ".").strip()), reverse=self._sort_reverse[col_id])
-        except (ValueError, TypeError):
-            items.sort(key=lambda t: str(t[0]).lower(), reverse=self._sort_reverse[col_id])
+        # Ordenar evaluando el tipo de dato
+        items.sort(key=lambda t: self._parse_value(t[0]), reverse=reverse)
 
+        # Mover filas ordenadas y rehacer el coloreado alternado
         for index, (_, k) in enumerate(items):
             self.tree.move(k, "", index)
             self.tree.item(k, tags=("even" if index % 2 == 0 else "odd",))
 
-        # Invertir dirección para el próximo clic
-        self._sort_reverse[col_id] = not self._sort_reverse[col_id]
+        # Restablecer el texto original en el encabezado previo
+        if self._last_sorted_col and self._last_sorted_col != col_id:
+            self.tree.heading(self._last_sorted_col, text=self.titles_map[self._last_sorted_col])
+
+        # Actualizar el encabezado actual con la flecha de dirección
+        indicador = " ▼" if reverse else " ▲"
+        self.tree.heading(col_id, text=f"{self.titles_map[col_id]}{indicador}")
+
+        # Invertir dirección para la próxima selección y guardar estado
+        self._sort_reverse[col_id] = not reverse
+        self._last_sorted_col = col_id
 
     def _on_treeview_select(self, event: tk.Event) -> None:
         """Maneja el evento de selección de fila."""
@@ -110,7 +142,7 @@ class TreeviewTable(ttk.Frame):
             self.on_double_click_callback(selected)
 
     def limpiar(self) -> None:
-        """Elimina todas las filas de la tabla."""
+        """Elimina todas las filas de la tabla y restablece encabezados."""
         for item in self.tree.get_children():
             self.tree.delete(item)
 
