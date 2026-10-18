@@ -1,7 +1,7 @@
 # Biblioteca: Sistema de Préstamos Interbibliotecarios
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-31%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-43%20passed-brightgreen.svg)](tests/)
 [![ORM](https://img.shields.io/badge/ORM-SQLAlchemy%202.0-red.svg)](https://www.sqlalchemy.org/)
 [![GUI](https://img.shields.io/badge/GUI-Tkinter-orange.svg)](https://docs.python.org/3/library/tkinter.html)
 [![License](https://img.shields.io/badge/license-Academic%20%2F%20MIT-lightgrey.svg)]()
@@ -108,6 +108,7 @@ DAO_TPI_2026/
 ├── api/                           # Backend local (Persistencia y Lógica de Negocio)
 │   ├── database.py                # Conexión SQLAlchemy 2.0 y sesión transaccional (SessionLocal)
 │   ├── models.py                  # Entidades ORM (Sede, Socio, Libro, Ejemplar, Prestamo, etc.)
+│   ├── seed.py                    # Script de población de datos iniciales (Seed)
 │   ├── dao/                       # Capa DAO (BaseDAO genérico y DAOs específicos por entidad)
 │   │   ├── base_dao.py
 │   │   ├── sede_dao.py
@@ -122,6 +123,7 @@ DAO_TPI_2026/
 │       ├── prestamo_service.py    # Orquestación de préstamos y validaciones (RN-01..RN-04)
 │       ├── logistica_service.py   # Patrón State para ciclo de vida de Remitos
 │       ├── multa_service.py       # Patrón Strategy para cálculo de multas y regularización
+│       ├── reserva_service.py     # Lógica de negocio y gestión de reservas de ejemplares
 │       └── reporte_service.py     # Consultas analíticas para los 4 Reportes No Triviales
 │
 ├── src/                           # Frontend local (Interfaz Gráfica de Usuario en Tkinter)
@@ -145,14 +147,14 @@ Si estás asistiendo en el desarrollo de este repositorio:
 
 ## 📌 Próximos Cambios (Roadmap)
 
-- [] **Desarrollo de Vistas en Tkinter (`src/pages/`):**
+- [X] **Desarrollo de Vistas en Tkinter (`src/pages/`):**
   - [X] `main_window.py`: Ventana principal con navegación por pestañas (`ttk.Notebook`).
   - [X] `sedes_view.py`: Alta, modificación y listado con estado de sedes.
   - [X] `socios_view.py`: Gestión de socios, panel de multas pendientes y botón de regularización/pago.
   - [X] `prestamos_view.py`: Formulario para registrar préstamos locales e interbibliotecarios con validación en vivo.
   - [X] `remitos_view.py`: Panel visual de seguimiento de envíos con botones interactivos para avanzar estados (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`).
   - [X] `reportes_view.py`: Visor tabular interactivo para los 4 reportes no triviales exigidos.
-  - [ ] `reservas_view.py`: Interfaz para la gestión, alta, consulta y cancelación de reservas de material bibliográfico.
+  - [X] `reservas_view.py`: Interfaz para la gestión, alta, consulta y cancelación de reservas de material bibliográfico.
 - [X] **Lógica de Negocio y Backend (`api/services/`):**
   - [X] `reserva_service.py`: Orquestador de reglas de negocio para la gestión de reservas, validación de stock no disponible y caducidad.
   - [X] Implementación y validación formal en servicios de los nuevos supuestos del dominio (`SUP-04` a `SUP-08`).
