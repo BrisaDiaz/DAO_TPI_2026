@@ -153,15 +153,15 @@ Si estás asistiendo en el desarrollo de este repositorio:
   - [X] `remitos_view.py`: Panel visual de seguimiento de envíos con botones interactivos para avanzar estados (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`).
   - [X] `reportes_view.py`: Visor tabular interactivo para los 4 reportes no triviales exigidos.
   - [ ] `reservas_view.py`: Interfaz para la gestión, alta, consulta y cancelación de reservas de material bibliográfico.
-- [ ] **Lógica de Negocio y Backend (`api/services/`):**
-  - [ ] `reserva_service.py`: Orquestador de reglas de negocio para la gestión de reservas, validación de stock no disponible y caducidad.
-  - [ ] Implementación y validación formal en servicios de los nuevos supuestos del dominio (`SUP-04` a `SUP-08`).
-  - [ ] Creación de un script o rutina de inicialización de datos (*seed* de datos iniciales) para poblar la base de datos con registros de prueba (sedes, autores, libros, ejemplares, socios y préstamos).
-- [ ] **Pruebas Automatizadas (`tests/`):**
-  - [ ] Creación de nuevas suites de prueba en Pytest para cubrir el servicio de reservas y la validación de los supuestos del dominio agregados.
+- [X] **Lógica de Negocio y Backend (`api/services/`):**
+  - [X] `reserva_service.py`: Orquestador de reglas de negocio para la gestión de reservas, validación de stock no disponible y caducidad.
+  - [X] Implementación y validación formal en servicios de los nuevos supuestos del dominio (`SUP-04` a `SUP-08`).
+  - [X] Creación de un script o rutina de inicialización de datos (*seed* de datos iniciales) para poblar la base de datos con registros de prueba (sedes, autores, libros, ejemplares, socios y préstamos).
+- [X] **Pruebas Automatizadas (`tests/`):**
+  - [X] Creación de nuevas suites de prueba en Pytest para cubrir el servicio de reservas y la validación de los supuestos del dominio agregados.
 - [ ] **Componentes Reutilizables (`src/components/`):**
   - [ ] Grilla estándar (`ttk.Treeview`) con soporte para ordenamiento por columnas.
-  - [ ] Modales de confirmación y captura de errores amigables.
+  - [X] Modales de confirmación y captura de errores amigables.
 - [ ] **Opcionales del Dominio:**
   - [ ] Implementación del patrón **Observer** para notificaciones automáticas al liberar reservas.
 
