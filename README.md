@@ -1,7 +1,7 @@
 # Biblioteca: Sistema de Préstamos Interbibliotecarios
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-43%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](tests/)
 [![ORM](https://img.shields.io/badge/ORM-SQLAlchemy%202.0-red.svg)](https://www.sqlalchemy.org/)
 [![GUI](https://img.shields.io/badge/GUI-Tkinter-orange.svg)](https://docs.python.org/3/library/tkinter.html)
 [![License](https://img.shields.io/badge/license-Academic%20%2F%20MIT-lightgrey.svg)]()
@@ -9,7 +9,9 @@
 > **Trabajo Práctico Integrador (TPI 2026)**  
 > **Cátedra:** Desarrollo de Aplicaciones con Objetos (DAO) — 4° Año  
 > **Institución:** Universidad Tecnológica Nacional - Facultad Regional Córdoba (UTN FRC)  
-> **Autor:** Brisa Abigaíl Díaz
+> **Integrantes:**  
+> * Brisa Abigaíl Díaz  
+> * Enzo Valentino Cardelli (Legajo: 400042)  
 
 ---
 
@@ -17,7 +19,7 @@
 
 **Biblioteca** es una solución integral de escritorio orientada a objetos para la administración y logística de una red de bibliotecas públicas interconectadas. El sistema resuelve la problemática habitual del seguimiento manual y disperso del inventario bibliográfico, permitiendo coordinar traslados físicos de ejemplares entre distintas sedes mediante remitos con trazabilidad de estados en tiempo real.
 
-A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicación incorpora de manera nativa la gestión de **préstamos interbibliotecarios**, el control automatizado de sanciones económicas por mora, y una arquitectura por capas estrictamente desacoplada (**DAO + Servicios + Modelos ORM**) que implementa patrones de diseño formales (**GoF**) para modelar procesos críticos de negocio.
+A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicación incorpora de manera nativa la gestión de **préstamos interbibliotecarios**, el control automatizado de sanciones económicas por mora o deterioro, notificaciones automáticas de reservas y una arquitectura por capas estrictamente desacoplada (**DAO + Servicios + Modelos ORM**) que implementa patrones de diseño formales (**GoF**) para modelar procesos críticos de negocio.
 
 ---
 
@@ -28,7 +30,8 @@ A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicac
 * **Préstamos Locales e Interbibliotecarios:** Diferenciación operativa entre retiros en sede y traslados logísticos inter-sedes.
 * **Trazabilidad Logística con Patrón State:** Ciclo de vida estricto del remito interbibliotecario (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`, con soporte para registro y resolución de incidencias en tránsito).
 * **Cálculo de Sanciones con Patrón Strategy:** Políticas dinámicas e intercambiables para el cálculo de multas diarias por mora (`MultaEstandar`, `MultaReducidaEstudiante`, `SinMultaPromocional`), con reactivación automática del socio al regularizar la deuda.
-* **Validaciones de Negocio Obligatorias (RN-01 a RN-05):** Bloqueo preventivo de socios con deuda o inhabilitados, verificación de disponibilidad física del material, pertenencia de sede y bloqueo de operaciones en sedes dadas de baja.
+* **Notificaciones de Reservas con Patrón Observer:** Cuando un ejemplar prestado es devuelto en estado `Disponible`, el sujeto observable (`DisponibilidadEjemplarSubject`) notifica automáticamente a todos los socios suscriptos en lista de espera (`SocioObserver`).
+* **Validaciones de Negocio Obligatorias (RN-01 a RN-05 y SUP-01 a SUP-08):** Bloqueo preventivo de socios con deuda o inhabilitados, límite de préstamos simultáneos, verificación de disponibilidad física del material, pertenencia de sede y bloqueo de operaciones en sedes dadas de baja.
 * **Reportes Analíticos No Triviales:** Consultas analíticas avanzadas con JOINs múltiples, funciones de agregación, agrupamientos y filtros (`CASE`, `COALESCE`, `COUNT`, `SUM`).
 * **Arquitectura Desacoplada:** División limpia entre el backend local (`api/`) y la interfaz visual (`src/`).
 
@@ -38,7 +41,7 @@ A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicac
 
 Antes de comenzar, asegúrate de contar con las siguientes herramientas instaladas en tu sistema:
 
-* **Python 3.10 o superior** (probado y verificado en Python 3.12).
+* **Python 3.10 o superior** (probado y verificado en Python 3.12 / 3.13).
 * **Git** (para clonado y gestión de versiones).
 * **Tkinter:** Generalmente incluido de forma nativa en las instalaciones estándar de Python para Windows. En distribuciones Linux basadas en Debian/Ubuntu, puede requerir: `sudo apt-get install python3-tk`.
 
@@ -72,7 +75,7 @@ pip install -r requirements.txt
 ```
 
 ### 4. Inicializar la base de datos (SQLite)
-La base de datos se genera automáticamente en la primera ejecución, pero puedes forzar la creación de tablas ejecutando:
+La base de datos se genera y puebla con datos iniciales (*seed*) automáticamente en la primera ejecución, pero puedes forzar la creación de tablas ejecutando:
 ```bash
 python -c "from api.database import crear_tablas; crear_tablas()"
 ```
@@ -86,7 +89,7 @@ python main.py
 
 ## 🧪 Ejecución de Pruebas (Tests)
 
-El proyecto cuenta con una batería de pruebas unitarias automatizadas utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
+El proyecto cuenta con una batería de **48 pruebas unitarias automatizadas** utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
 
 ```bash
 pytest tests/ -v
@@ -94,8 +97,11 @@ pytest tests/ -v
 
 ### Cobertura de las suites actuales:
 * **`tests/test_remitos_state.py` (9 tests):** Valida las transiciones del patrón State (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`), prohibición de transiciones inválidas, manejo y resolución de incidencias en trayecto.
-* **`tests/test_multas.py` (11 tests):** Valida las estrategias concretas del patrón Strategy, el selector dinámico de tarifas, cálculo por días de mora, pago, condonación y reactivación del socio.
-* **`tests/test_prestamos.py` (11 tests):** Valida las reglas de negocio RN-01 a RN-04, préstamos locales vs. interbibliotecarios con generación automática de remitos y devoluciones.
+* **`tests/test_multas.py` (12 tests):** Valida las estrategias concretas del patrón Strategy, el selector dinámico de tarifas, cálculo por días de mora, cargos por daño/extravío, pago, condonación y reactivación del socio.
+* **`tests/test_prestamos.py` (11 tests):** Valida las reglas de negocio RN-01 a RN-04, los supuestos SUP-04, SUP-07 y SUP-08, préstamos locales vs. interbibliotecarios y devoluciones.
+* **`tests/test_reservas.py` (7 tests):** Valida la creación de reservas con stock agotado (SUP-06), límite de préstamos (SUP-04), cancelaciones y caducidad automática a las 48h (SUP-05).
+* **`tests/test_observer.py` (5 tests):** Valida la estructura del patrón Observer (`Subject`, `Observer`, `attach`, `detach`, `notify`) y su disparo automático al registrar la devolución de un ejemplar con reservas pendientes.
+* **`tests/test_reportes.py` (4 tests):** Valida la ejecución y estructura de los 4 reportes analíticos no triviales.
 
 ---
 
@@ -120,11 +126,12 @@ DAO_TPI_2026/
 │   │   ├── remito_dao.py
 │   │   └── reserva_dao.py
 │   └── services/                  # Orquestadores de negocio y aplicación de patrones
-│       ├── prestamo_service.py    # Orquestación de préstamos y validaciones (RN-01..RN-04)
-│       ├── logistica_service.py   # Patrón State para ciclo de vida de Remitos
-│       ├── multa_service.py       # Patrón Strategy para cálculo de multas y regularización
-│       ├── reserva_service.py     # Lógica de negocio y gestión de reservas de ejemplares
-│       └── reporte_service.py     # Consultas analíticas para los 4 Reportes No Triviales
+│       ├── prestamo_service.py     # Orquestación de préstamos, validaciones y disparo de Observer
+│       ├── logistica_service.py    # Patrón State para ciclo de vida de Remitos
+│       ├── multa_service.py        # Patrón Strategy para cálculo de multas y regularización
+│       ├── notificacion_service.py # Patrón Observer (Subject / Observer) para reservas disponibles
+│       ├── reserva_service.py      # Lógica de negocio y gestión de reservas de ejemplares
+│       └── reporte_service.py      # Consultas analíticas para los 4 Reportes No Triviales
 │
 ├── src/                           # Frontend local (Interfaz Gráfica de Usuario en Tkinter)
 │   ├── pages/                     # Ventanas y vistas (Notebook por pestañas, Sedes, Socios, etc.)
@@ -141,7 +148,7 @@ Si estás asistiendo en el desarrollo de este repositorio:
 1. **Nunca violes el patrón DAO:** La capa visual (`src/`) y los servicios (`api/services/`) no deben ejecutar queries directas de SQLAlchemy contra la base de datos si dicha operación corresponde a un DAO (`api/dao/`).
 2. **Preserva el desacoplamiento `api/` vs `src/`:** Toda regla de negocio (validaciones, cálculos, transiciones) debe resolverse en `api/services/`. `src/` sólo debe manejar eventos de UI, captura de inputs y renderizado visual.
 3. **Tipado Estricto:** Mantener el uso de `typing` (`Optional`, `List`, `Dict`, `Union`, type hints de Python 3.10+) en todas las firmas públicas.
-4. **Respeto a las Reglas de Negocio:** Toda nueva funcionalidad de préstamo debe respetar las directivas RN-01 a RN-05 descritas en [Reglas_Negocio_y_Supuestos.md](file:///e:/Escritorio/UTN/4%20Cuarto%20A%C3%B1o/TP-DAO/DAO_TPI_2026/Reglas_Negocio_y_Supuestos.md).
+4. **Respeto a las Reglas de Negocio:** Toda nueva funcionalidad de préstamo debe respetar las directivas RN-01 a RN-05 y SUP-01 a SUP-08 descritas en [Reglas_Negocio_y_Supuestos.md](file:///e:/Escritorio/UTN/4%20Cuarto%20A%C3%B1o/TP-DAO/DAO_TPI_2026/Reglas_Negocio_y_Supuestos.md).
 
 ---
 
@@ -154,7 +161,7 @@ Si estás asistiendo en el desarrollo de este repositorio:
   - [X] `prestamos_view.py`: Formulario para registrar préstamos locales e interbibliotecarios con validación en vivo.
   - [X] `remitos_view.py`: Panel visual de seguimiento de envíos con botones interactivos para avanzar estados (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`).
   - [X] `reportes_view.py`: Visor tabular interactivo para los 4 reportes no triviales exigidos.
-  - [X] `reservas_view.py`: Interfaz para la gestión, alta, consulta y cancelación de reservas de material bibliográfico.
+  - [X] `reservas_view.py`: Interfaz para la gestión, alta, consulta, cancelación de reservas y visor de notificaciones Observer.
 - [X] **Lógica de Negocio y Backend (`api/services/`):**
   - [X] `reserva_service.py`: Orquestador de reglas de negocio para la gestión de reservas, validación de stock no disponible y caducidad.
   - [X] Implementación y validación formal en servicios de los nuevos supuestos del dominio (`SUP-04` a `SUP-08`).
@@ -164,8 +171,8 @@ Si estás asistiendo en el desarrollo de este repositorio:
 - [X] **Componentes Reutilizables (`src/components/`):**
   - [X] Grilla estándar (`ttk.Treeview`) con soporte para ordenamiento por columnas.
   - [X] Modales de confirmación y captura de errores amigables.
-- [ ] **Opcionales del Dominio:**
-  - [ ] Implementación del patrón **Observer** para notificaciones automáticas al liberar reservas.
+- [X] **Opcionales del Dominio:**
+  - [X] Implementación del patrón **Observer** (`notificacion_service.py`) para notificaciones automáticas al liberar ejemplares con reservas pendientes.
 
 ---
 

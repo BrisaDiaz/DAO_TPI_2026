@@ -2,8 +2,9 @@
 Vista de Gestión de Reservas de Material Bibliográfico.
 
 Permite consultar el listado de reservas, filtrar por estado y socio/libro,
-registrar nuevas reservas mediante ReservaService (verificando stock = 0)
-y cancelar reservas pendientes.
+registrar nuevas reservas mediante ReservaService (verificando stock = 0),
+cancelar reservas pendientes y visualizar las notificaciones emitidas por el
+Patrón Observer.
 """
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -16,7 +17,83 @@ from api.dao.socio_dao import SocioDAO
 from api.dao.libro_dao import LibroDAO
 from api.dao.sede_dao import SedeDAO
 from api.services.reserva_service import ReservaService
+from api.services.notificacion_service import NotificacionService
 from src.components.treeview_table import TreeviewTable
+
+
+class NotificacionesObserverModal(tk.Toplevel):
+    """Modal para consultar el historial de notificaciones emitidas por el Patrón Observer."""
+
+    def __init__(self, parent: tk.Widget):
+        super().__init__(parent)
+        self.title("Historial de Notificaciones — Patrón Observer")
+        self.geometry("760x420")
+        self.resizable(True, True)
+        self.transient(parent)
+        self.grab_set()
+
+        self._centrar(parent)
+        self._crear_interfaz()
+
+    def _centrar(self, parent: tk.Widget) -> None:
+        self.update_idletasks()
+        ancho, alto = 760, 420
+        x = parent.winfo_rootx() + (parent.winfo_width() - ancho) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - alto) // 2
+        self.geometry(f"{ancho}x{alto}+{max(0, x)}+{max(0, y)}")
+
+    def _crear_interfaz(self) -> None:
+        padding_frame = ttk.Frame(self, padding="20 15")
+        padding_frame.pack(fill="both", expand=True)
+        padding_frame.grid_rowconfigure(1, weight=1)
+        padding_frame.grid_columnconfigure(0, weight=1)
+
+        header = ttk.Frame(padding_frame)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+
+        ttk.Label(
+            header,
+            text="🔔 Notificaciones de Disponibilidad (Patrón Observer)",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(anchor="w")
+        ttk.Label(
+            header,
+            text="Registros disparados automáticamente cuando un ejemplar reservado pasa a estado 'Disponible'.",
+            font=("Segoe UI", 9),
+            foreground="#64748B",
+        ).pack(anchor="w", pady=(2, 0))
+
+        columnas = [
+            ("fecha", "Fecha y Hora", 130),
+            ("socio", "Socio Suscripto", 150),
+            ("email", "Email", 150),
+            ("libro", "Obra Disponible", 180),
+            ("ejemplar", "Ejemplar", 90),
+            ("sede", "Sede", 120),
+        ]
+        self.tabla = TreeviewTable(padding_frame, columns=columnas)
+        self.tabla.grid(row=1, column=0, sticky="nsew")
+
+        btn_frame = ttk.Frame(padding_frame)
+        btn_frame.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+
+        ttk.Button(btn_frame, text="Cerrar", command=self.destroy).pack(side="right")
+        self._cargar_historial()
+
+    def _cargar_historial(self) -> None:
+        historial = NotificacionService.obtener_historial()
+        filas = [
+            {
+                "fecha": n.get("fecha", "-"),
+                "socio": n.get("socio", "-"),
+                "email": n.get("email", "-"),
+                "libro": n.get("libro", "-"),
+                "ejemplar": n.get("ejemplar", "-"),
+                "sede": n.get("sede", "-"),
+            }
+            for n in reversed(historial)
+        ]
+        self.tabla.cargar_datos(filas)
 
 
 class ReservaFormModal(tk.Toplevel):
@@ -188,7 +265,7 @@ class ReservasView(ttk.Frame):
 
         ttk.Label(
             header_frame,
-            text="Control de solicitudes de material sin stock, seguimiento de estados y gestión de turnos.",
+            text="Control de solicitudes de material sin stock, seguimiento de estados y notificaciones Observer.",
             font=("Segoe UI", 10),
             foreground="#64748B",
         ).pack(anchor="w", pady=(2, 0))
@@ -260,6 +337,12 @@ class ReservasView(ttk.Frame):
 
         ttk.Button(
             actions_frame,
+            text="🔔 Ver Notificaciones (Observer)",
+            command=self._abrir_modal_notificaciones,
+        ).pack(side="left", padx=(0, 8))
+
+        ttk.Button(
+            actions_frame,
             text="🔄 Actualizar",
             command=self.cargar_datos,
         ).pack(side="right")
@@ -312,6 +395,9 @@ class ReservasView(ttk.Frame):
             session=self.session,
             on_guardar_callback=self.cargar_datos,
         )
+
+    def _abrir_modal_notificaciones(self) -> None:
+        NotificacionesObserverModal(parent=self.winfo_toplevel())
 
     def _cancelar_reserva(self) -> None:
         fila = self.tabla.get_selected_row()

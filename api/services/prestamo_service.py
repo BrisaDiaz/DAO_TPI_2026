@@ -3,9 +3,11 @@ Servicio de Préstamos - Lógica de negocio y validaciones.
 
 Orquesta el proceso de alta de préstamos (locales e interbibliotecarios),
 devoluciones, prohibición de renovaciones (SUP-08), límite de préstamos (SUP-04),
-cargos por daño/extravío (SUP-07) y reglas de negocio obligatorias (RN-01 a RN-05).
+cargos por daño/extravío (SUP-07), disparo del patrón Observer para reservas
+pendientes y reglas de negocio obligatorias (RN-01 a RN-05).
 """
 from datetime import date, timedelta
+from typing import List, Dict, Any
 
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,7 @@ from api.dao.sede_dao import SedeDAO
 from api.dao.multa_dao import MultaDAO
 from api.services.multa_service import MultaService
 from api.services.logistica_service import LogisticaService
+from api.services.notificacion_service import NotificacionService
 
 
 class PrestamoService:
@@ -35,6 +38,8 @@ class PrestamoService:
         self.multa_dao = MultaDAO(session)
         self.multa_service = MultaService(session)
         self.logistica_service = LogisticaService(session)
+        self.notificacion_service = NotificacionService(session)
+        self.ultimas_notificaciones: List[Dict[str, Any]] = []
 
     # ─────────────────────────────────────────────────────────────────────────
     # Alta de Préstamo
@@ -173,6 +178,8 @@ class PrestamoService:
         Si hay retraso, genera una multa automáticamente usando la estrategia indicada.
         Actualiza el estado del ejemplar según su condición física al momento de la devolución.
         Valida que los préstamos interbibliotecarios tengan su remito en estado 'Recibido'.
+        Si el ejemplar vuelve a estado 'Disponible', dispara el Patrón Observer para notificar
+        automáticamente a los socios con reservas pendientes sobre ese libro en esa sede.
 
         Args:
             prestamo_id: ID del préstamo a devolver.
@@ -182,6 +189,8 @@ class PrestamoService:
         Returns:
             El préstamo actualizado.
         """
+        self.ultimas_notificaciones = []
+
         prestamo = self.prestamo_dao.obtener_por_id(prestamo_id)
         if not prestamo:
             raise ValueError(f"No se encontró el préstamo con ID {prestamo_id}.")
@@ -242,6 +251,12 @@ class PrestamoService:
             if socio:
                 socio.activo = 0
             self.session.commit()
+
+        # Patrón Observer: Notificar a los socios en lista de espera si el ejemplar quedó Disponible
+        if ejemplar and estado_fisico_ejemplar == "Disponible":
+            self.ultimas_notificaciones = (
+                self.notificacion_service.notificar_disponibilidad_ejemplar(ejemplar)
+            )
 
         return prestamo
 

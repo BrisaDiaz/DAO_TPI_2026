@@ -289,65 +289,80 @@ if __name__ == "__main__":
 
 ### Justificación y Motivación en el Dominio
 
-En el proceso opcional de **Gestión de Reservas y Notificaciones**, cuando un ejemplar físico es devuelto o cambia su estado a "Disponible", el sistema debe notificar automáticamente a los socios que se encontraban en lista de espera (`Reserva`).
-Mediante el patrón **Observer**, el `Ejemplar` (sujeto observable) mantiene una lista de socios subscritos (`Observadores`) y les notifica de manera automática ante un cambio de estado sin acoplar la lógica de negocio de los préstamos con el sistema de mensajería.
+En el proceso de **Gestión de Reservas y Envío de Notificaciones**, cuando un ejemplar físico prestado es devuelto y cambia su estado a `"Disponible"`, el sistema debe notificar automáticamente a los socios que se encontraban en lista de espera (`Reserva` con estado `"Pendiente"`).
+Mediante el patrón **Observer** (siguiendo la plantilla institucional de la cátedra `Subject` / `Observer`), el sujeto observable (`DisponibilidadEjemplarSubject`) mantiene la lista de observadores suscriptos (`_observers`) mediante `attach()` y `detach()`, y les notifica de manera automática invocando `notify()` $\rightarrow$ `observer.update()`, sin acoplar la lógica de devolución de préstamos con el mecanismo de notificación.
 
-### Ejemplo de Implementación en Python (Aviso de Disponibilidad de Material)
+### Implementación en Python (`api/services/notificacion_service.py`)
 
 ```python
 from abc import ABC, abstractmethod
 
-# Interfaz Observer
-class ObservadorSocio(ABC):
+# Interfaz Observer (según plantilla de la cátedra)
+class Observer(ABC):
     @abstractmethod
-    def actualizar(self, mensaje: str):
+    def update(self) -> None:
+        """
+        Todas las clases derivadas deben definir este método
+        para poder recibir notificaciones de actualización.
+        """
         pass
 
-# Observador Concreto (Socio)
-class SocioObserver(ObservadorSocio):
-    def __init__(self, nombre: str, email: str):
+# Clase Subject (según plantilla de la cátedra)
+class Subject:
+    def __init__(self):
+        self._observers = []
+
+    def attach(self, observer: Observer) -> None:
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def detach(self, observer: Observer) -> None:
+        if observer in self._observers:
+            self._observers.remove(observer)
+
+    def notify(self) -> None:
+        for observer in self._observers:
+            observer.update()
+
+# Observador Concreto (Socio con Reserva Pendiente)
+class SocioObserver(Observer):
+    def __init__(self, nombre: str, email: str, titulo_libro: str, codigo_ejemplar: str):
+        super().__init__()
         self.nombre = nombre
         self.email = email
-
-    def actualizar(self, mensaje: str):
-        print(f"Notificación enviada a {self.nombre} ({self.email}): {mensaje}")
-
-# Sujeto Observable (Ejemplar / Reserva)
-class EjemplarObservable:
-    def __init__(self, codigo: str, titulo_libro: str):
-        self.codigo = codigo
         self.titulo_libro = titulo_libro
-        self._observadores = []
+        self.codigo_ejemplar = codigo_ejemplar
+
+    def update(self) -> None:
+        print(
+            f"Notificación enviada a {self.nombre} ({self.email}): "
+            f"El libro '{self.titulo_libro}' (Ejemplar: {self.codigo_ejemplar}) "
+            "ya se encuentra disponible para retiro."
+        )
+
+# Sujeto Concreto Observable (Disponibilidad de Ejemplar)
+class DisponibilidadEjemplarSubject(Subject):
+    def __init__(self, codigo_inventario: str, titulo_libro: str):
+        super().__init__()
+        self.codigo_inventario = codigo_inventario
+        self.titulo_libro = titulo_libro
         self._estado = "Prestado"
 
-    def agregar_observador(self, observador: ObservadorSocio):
-        self._observadores.append(observador)
-
-    def quitar_observador(self, observador: ObservadorSocio):
-        self._observadores.remove(observador)
-
-    def notificar_observadores(self, mensaje: str):
-        for obs in self._observadores:
-            obs.actualizar(mensaje)
-
-    def cambiar_estado(self, nuevo_estado: str):
+    def cambiar_estado(self, nuevo_estado: str) -> None:
         self._estado = nuevo_estado
         if self._estado == "Disponible":
-            self.notificar_observadores(f"El libro '{self.titulo_libro}' (Ejemplar: {self.codigo}) ya se encuentra disponible para retiro.")
+            self.notify()
 
 # --- Demostración de uso ---
 if __name__ == "__main__":
-    # Sujeto
-    ejemplar = EjemplarObservable("EJ-999", "Arquitectura de Software")
+    sujeto = DisponibilidadEjemplarSubject("EJ-999", "Arquitectura de Software")
 
-    # Suscriptores (Socios en lista de espera)
-    socio1 = SocioObserver("Ana Gómez", "ana@mail.com")
-    socio2 = SocioObserver("Carlos Ruiz", "carlos@mail.com")
+    socio1 = SocioObserver("Ana Gómez", "ana@mail.com", "Arquitectura de Software", "EJ-999")
+    socio2 = SocioObserver("Carlos Ruiz", "carlos@mail.com", "Arquitectura de Software", "EJ-999")
 
-    ejemplar.agregar_observador(socio1)
-    ejemplar.agregar_observador(socio2)
+    sujeto.attach(socio1)
+    sujeto.attach(socio2)
 
     print("--- Al registrarse la devolución del ejemplar ---")
-    ejemplar.cambiar_estado("Disponible")
-
+    sujeto.cambiar_estado("Disponible")
 ```

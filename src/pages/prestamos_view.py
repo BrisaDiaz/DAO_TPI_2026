@@ -328,30 +328,49 @@ class DevolucionModal(tk.Toplevel):
         ttk.Button(btn_frame, text="Confirmar Devolución", command=self._confirmar).pack(side="right")
 
     def _confirmar(self) -> None:
-            estado_fisico = self.cmb_estado.get()
-            if not messagebox.askyesno(
-                "Confirmar devolución",
-                f"¿Confirmar la devolución del préstamo #{self.prestamo.id}?\n"
-                f"Estado del ejemplar al devolver: {estado_fisico}.",
-                parent=self,
-            ):
-                return
-            try:
-                # Aquí se ejecuta la regla de negocio que validará el estado del remito
-                self.prestamo_service.registrar_devolucion(
-                    prestamo_id=self.prestamo.id,
-                    estado_fisico_ejemplar=estado_fisico,
+        estado_fisico = self.cmb_estado.get()
+        if not messagebox.askyesno(
+            "Confirmar devolución",
+            f"¿Confirmar la devolución del préstamo #{self.prestamo.id}?\n"
+            f"Estado del ejemplar al devolver: {estado_fisico}.",
+            parent=self,
+        ):
+            return
+        try:
+            # Aquí se ejecuta la regla de negocio que validará el estado del remito
+            # y disparará el Patrón Observer si había reservas pendientes
+            self.prestamo_service.registrar_devolucion(
+                prestamo_id=self.prestamo.id,
+                estado_fisico_ejemplar=estado_fisico,
+            )
+            notificaciones = self.prestamo_service.ultimas_notificaciones
+            if notificaciones:
+                detalle_obs = "\n".join(
+                    f"• {n['socio']} ({n['email']})" for n in notificaciones
                 )
-                messagebox.showinfo("Devolución registrada", "La devolución fue registrada correctamente.", parent=self)
-                if self.on_guardar_callback:
-                    self.on_guardar_callback()
-                self.destroy()
-            except ValueError as e:
-                # Captura la excepción de negocio y la muestra limpiamente en la UI
-                messagebox.showerror("No se pudo registrar la devolución", str(e), parent=self)
-            except Exception as e:
-                self.session.rollback()
-                messagebox.showerror("Error inesperado", str(e), parent=self)
+                messagebox.showinfo(
+                    "Devolución registrada y Observadores notificados",
+                    "La devolución fue registrada correctamente.\n\n"
+                    f"🔔 Patrón Observer disparado ({len(notificaciones)} socio(s) en lista de espera notificado(s)):\n"
+                    f"{detalle_obs}",
+                    parent=self,
+                )
+            else:
+                messagebox.showinfo(
+                    "Devolución registrada",
+                    "La devolución fue registrada correctamente.",
+                    parent=self,
+                )
+            if self.on_guardar_callback:
+                self.on_guardar_callback()
+            self.destroy()
+        except ValueError as e:
+            # Captura la excepción de negocio y la muestra limpiamente en la UI
+            messagebox.showerror("No se pudo registrar la devolución", str(e), parent=self)
+        except Exception as e:
+            self.session.rollback()
+            messagebox.showerror("Error inesperado", str(e), parent=self)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Vista principal: Préstamos + Remitos (Notebook interno)
