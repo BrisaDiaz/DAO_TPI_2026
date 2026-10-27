@@ -12,6 +12,7 @@
 > **Integrantes:**  
 > * Brisa Abigaíl Díaz  
 > * Enzo Valentino Cardelli (Legajo: 400042)  
+> * Augusto Bossi (Legajo: 87917)  
 
 ---
 

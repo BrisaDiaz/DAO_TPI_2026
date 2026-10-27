@@ -15,7 +15,7 @@
 |---|---|
 | 400042 | Enzo Valentino Cardelli |
 | *(Completar)* | Brisa Abigaíl Díaz |
-| *(Completar)* | *(Integrante 3)* |
+| 87917 | Augusto Bossi |
 | *(Completar)* | *(Integrante 4)* |
 
 ---
