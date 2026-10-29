@@ -12,7 +12,8 @@
 > **Integrantes:**  
 > * Brisa Abigaíl Díaz (Legajo: 97287)
 > * Enzo Valentino Cardelli (Legajo: 400042)  
-> * Augusto Bossi (Legajo: 87917)  
+> * Augusto Bossi (Legajo: 87917)
+> * Uriel Agustin Piaggio (Legajo: 87599)
 
 ---
 
