@@ -10,7 +10,7 @@
 > **Cátedra:** Desarrollo de Aplicaciones con Objetos (DAO) — 4° Año  
 > **Institución:** Universidad Tecnológica Nacional - Facultad Regional Córdoba (UTN FRC)  
 > **Integrantes:**  
-> * Brisa Abigaíl Díaz  
+> * Brisa Abigaíl Díaz (Legajo: 97287)
 > * Enzo Valentino Cardelli (Legajo: 400042)  
 > * Augusto Bossi (Legajo: 87917)  
 
