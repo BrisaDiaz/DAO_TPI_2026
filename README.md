@@ -6,14 +6,14 @@
 [![GUI](https://img.shields.io/badge/GUI-Tkinter-orange.svg)](https://docs.python.org/3/library/tkinter.html)
 [![License](https://img.shields.io/badge/license-Academic%20%2F%20MIT-lightgrey.svg)]()
 
-> **Trabajo Práctico Integrador (TPI 2026)**  
+> **Trabajo Práctico Integrador (TPI 2026) — Grupo G-011**  
 > **Cátedra:** Desarrollo de Aplicaciones con Objetos (DAO) — 4° Año  
 > **Institución:** Universidad Tecnológica Nacional - Facultad Regional Córdoba (UTN FRC)  
 > **Integrantes:**  
 > * Brisa Abigaíl Díaz (Legajo: 97287)
 > * Enzo Valentino Cardelli (Legajo: 400042)  
 > * Augusto Bossi (Legajo: 87917)
-> * Uriel Agustin Piaggio (Legajo: 87599)
+> * Uriel Agustín Piaggio (Legajo: 87599)
 
 ---
 

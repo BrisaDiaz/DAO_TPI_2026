@@ -6,7 +6,7 @@
 
 | Campo | Detalle |
 |---|---|
-| **Número de grupo:** | *(Completar número de grupo)* |
+| **Número de grupo:** | **G-011** |
 | **Tema:** | **Tema 1 — Biblioteca: Sistema de Préstamos Interbibliotecarios** |
 
 ### Integrantes
@@ -14,9 +14,9 @@
 | Legajo | Nombre y Apellido |
 |---|---|
 | 400042 | Enzo Valentino Cardelli |
-| *(Completar)* | Brisa Abigaíl Díaz |
+| 97287 | Brisa Abigaíl Díaz |
 | 87917 | Augusto Bossi |
-| 87599 | uriel Agustin Piaggio |
+| 87599 | Uriel Agustín Piaggio |
 
 ---
 
