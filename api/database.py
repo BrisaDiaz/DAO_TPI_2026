@@ -2,7 +2,7 @@
 Configuración del motor SQLAlchemy y gestión de sesiones.
 Base de datos: SQLite local (biblioteca.db en la raíz del proyecto).
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 # Motor SQLite - el archivo se crea en la raíz del proyecto
@@ -23,6 +23,21 @@ def crear_tablas():
     from api.models import (Sede, Socio, Autor, Libro, Ejemplar,
                             Prestamo, Multa, Remito, Reserva)
     Base.metadata.create_all(bind=engine)
+    migrar_columnas_faltantes()
+
+
+def migrar_columnas_faltantes(eng=None) -> None:
+    """
+    Agrega columnas nuevas a tablas ya existentes (create_all no altera tablas creadas).
+    Permite seguir usando un biblioteca.db generado con una version anterior del modelo.
+    """
+    eng = eng or engine
+    inspector = inspect(eng)
+    if "reservas" in inspector.get_table_names():
+        columnas = {c["name"] for c in inspector.get_columns("reservas")}
+        if "fecha_notificacion" not in columnas:
+            with eng.begin() as conn:
+                conn.execute(text("ALTER TABLE reservas ADD COLUMN fecha_notificacion DATETIME"))
 
 
 def get_session():

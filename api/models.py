@@ -245,6 +245,8 @@ class Reserva(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     fecha_reserva: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    # Se completa al notificar la disponibilidad del material: inicia el plazo de SUP-05
+    fecha_notificacion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     estado: Mapped[str] = mapped_column(
         String(20), default="Pendiente"
     )  # Pendiente, Concretada, Cancelada, Caducada

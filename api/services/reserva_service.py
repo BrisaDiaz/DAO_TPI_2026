@@ -6,10 +6,10 @@ aplicando las reglas de negocio y supuestos del dominio:
 - RN-01: Disponibilidad de ejemplar (solo se puede reservar si el stock en la sede es 0).
 - RN-02 / RN-04: Socio habilitado y sedes activas.
 - SUP-04: Límite de hasta 3 préstamos/reservas simultáneas activas.
-- SUP-05: Caducidad automática de la reserva a las 48 horas de la notificación.
+- SUP-05: Caducidad de la reserva a las 48 horas hábiles de la notificación de disponibilidad.
 - SUP-06: Creación de reserva solo permitida cuando stock disponible = 0.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from sqlalchemy.orm import Session
 
 from api.models import Reserva, Ejemplar
@@ -20,10 +20,30 @@ from api.dao.sede_dao import SedeDAO
 from api.dao.prestamo_dao import PrestamoDAO
 
 
+def horas_habiles_entre(inicio: datetime, fin: datetime) -> float:
+    """
+    Cantidad de horas hábiles transcurridas entre dos instantes.
+    Se consideran hábiles las 24 horas de los días de lunes a viernes;
+    sábados y domingos no suman (no se contemplan feriados).
+    """
+    if fin <= inicio:
+        return 0.0
+
+    total = timedelta()
+    cursor = inicio
+    while cursor < fin:
+        proxima_medianoche = datetime.combine(cursor.date() + timedelta(days=1), time.min)
+        tramo_fin = min(proxima_medianoche, fin)
+        if cursor.weekday() < 5:  # 0 = lunes ... 4 = viernes
+            total += tramo_fin - cursor
+        cursor = tramo_fin
+    return total.total_seconds() / 3600
+
+
 class ReservaService:
     """Servicio de negocio para la gestión integral de reservas."""
 
-    HORAS_CADUCIDAD_DEFAULT = 48  # SUP-05: 48 horas para caducidad
+    HORAS_CADUCIDAD_DEFAULT = 48  # SUP-05: 48 horas hábiles desde la notificación
     LIMITE_PRESTAMOS_MAX = 3      # SUP-04: Máximo 3 préstamos/reservas activas
 
     def __init__(self, session: Session):
@@ -133,21 +153,28 @@ class ReservaService:
         self.reserva_dao.actualizar()
         return reserva
 
-    def procesar_caducidades(self) -> int:
+    def procesar_caducidades(self, ahora: datetime | None = None) -> int:
         """
-        SUP-05: Revisa y caduca las reservas que superen las 48 horas pendientes.
+        SUP-05: Caduca las reservas pendientes que, una vez notificada la disponibilidad
+        del material, superaron las 48 horas hábiles sin ser concretadas.
+
+        - El plazo se cuenta desde `fecha_notificacion` (no desde la fecha de la reserva):
+          las reservas que todavía no fueron notificadas no caducan.
+        - Las horas hábiles se computan de lunes a viernes; sábados y domingos no suman.
         Retorna la cantidad de reservas caducadas.
         """
-        limite_tiempo = datetime.now() - timedelta(hours=self.HORAS_CADUCIDAD_DEFAULT)
-        reservas_vencidas = self.session.query(Reserva).filter(
+        ahora = ahora or datetime.now()
+        notificadas = self.session.query(Reserva).filter(
             Reserva.estado == "Pendiente",
-            Reserva.fecha_reserva <= limite_tiempo
+            Reserva.fecha_notificacion.isnot(None),
         ).all()
 
         cant_caducadas = 0
-        for reserva in reservas_vencidas:
-            reserva.estado = "Caducada"
-            cant_caducadas += 1
+        for reserva in notificadas:
+            horas = horas_habiles_entre(reserva.fecha_notificacion, ahora)
+            if horas >= self.HORAS_CADUCIDAD_DEFAULT:
+                reserva.estado = "Caducada"
+                cant_caducadas += 1
 
         if cant_caducadas > 0:
             self.session.commit()

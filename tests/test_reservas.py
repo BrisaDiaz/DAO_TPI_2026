@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from api.database import Base
 from api.models import Sede, Socio, Libro, Ejemplar, Prestamo, Reserva
-from api.services.reserva_service import ReservaService
+from api.services.reserva_service import ReservaService, horas_habiles_entre
 
 
 @pytest.fixture
@@ -165,23 +165,76 @@ class TestReservaService:
         reserva_cancelada = service.cancelar_reserva(reserva.id)
         assert reserva_cancelada.estado == "Cancelada"
 
-    def test_sup05_caducidad_automatica_reservas(self, session, datos_reservas):
-        """SUP-05: Una reserva pendiente caduca automáticamente tras transcurrir 48 horas."""
-        d = datos_reservas
-        service = ReservaService(session)
-
-        reserva_vencida = Reserva(
+    # ── SUP-05: 48 horas hábiles desde la notificación de disponibilidad ──────
+    @staticmethod
+    def _reserva_notificada(session, d, fecha_notificacion):
+        reserva = Reserva(
             socio_id=d["socio_ok"].id,
             libro_id=d["libro"].id,
             sede_id=d["sede_a"].id,
-            fecha_reserva=datetime.now() - timedelta(hours=50),
-            estado="Pendiente"
+            fecha_reserva=fecha_notificacion - timedelta(days=30),
+            fecha_notificacion=fecha_notificacion,
+            estado="Pendiente",
         )
-        session.add(reserva_vencida)
+        session.add(reserva)
+        session.commit()
+        return reserva
+
+    def test_sup05_reserva_sin_notificar_no_caduca(self, session, datos_reservas):
+        """SUP-05: el plazo corre desde la notificación; sin aviso no hay caducidad."""
+        d = datos_reservas
+        service = ReservaService(session)
+
+        reserva = Reserva(
+            socio_id=d["socio_ok"].id,
+            libro_id=d["libro"].id,
+            sede_id=d["sede_a"].id,
+            fecha_reserva=datetime.now() - timedelta(days=30),
+            estado="Pendiente",
+        )
+        session.add(reserva)
         session.commit()
 
-        caducadas = service.procesar_caducidades()
-        
-        assert caducadas == 1
-        session.refresh(reserva_vencida)
-        assert reserva_vencida.estado == "Caducada"
+        assert service.procesar_caducidades() == 0
+        session.refresh(reserva)
+        assert reserva.estado == "Pendiente"
+
+    def test_sup05_caduca_a_las_48_horas_habiles(self, session, datos_reservas):
+        """SUP-05: a las 48 horas hábiles de la notificación la reserva caduca (no antes)."""
+        d = datos_reservas
+        service = ReservaService(session)
+        notificada = datetime(2026, 11, 2, 9, 0)  # lunes 09:00
+        reserva = self._reserva_notificada(session, d, notificada)
+
+        # Miércoles 08:59 -> 47 h 59 min hábiles: todavía vigente
+        assert service.procesar_caducidades(ahora=datetime(2026, 11, 4, 8, 59)) == 0
+        session.refresh(reserva)
+        assert reserva.estado == "Pendiente"
+
+        # Miércoles 09:00 -> 48 h hábiles exactas: caduca
+        assert service.procesar_caducidades(ahora=datetime(2026, 11, 4, 9, 0)) == 1
+        session.refresh(reserva)
+        assert reserva.estado == "Caducada"
+
+    def test_sup05_fines_de_semana_no_cuentan(self, session, datos_reservas):
+        """SUP-05: sábados y domingos no suman horas hábiles al plazo."""
+        d = datos_reservas
+        service = ReservaService(session)
+        notificada = datetime(2026, 10, 30, 18, 0)  # viernes 18:00
+        reserva = self._reserva_notificada(session, d, notificada)
+
+        # Lunes 18:00: pasaron 72 h corridas pero solo 6 + 18 = 24 h hábiles
+        assert service.procesar_caducidades(ahora=datetime(2026, 11, 2, 18, 0)) == 0
+        session.refresh(reserva)
+        assert reserva.estado == "Pendiente"
+
+        # Martes 18:00: 6 + 24 + 18 = 48 h hábiles
+        assert service.procesar_caducidades(ahora=datetime(2026, 11, 3, 18, 0)) == 1
+        session.refresh(reserva)
+        assert reserva.estado == "Caducada"
+
+    def test_horas_habiles_entre_ignora_sabado_y_domingo(self):
+        """Viernes 20:00 -> lunes 04:00 = 4 h del viernes + 4 h del lunes."""
+        assert horas_habiles_entre(datetime(2026, 10, 30, 20, 0), datetime(2026, 11, 2, 4, 0)) == 8.0
+        assert horas_habiles_entre(datetime(2026, 10, 31, 10, 0), datetime(2026, 11, 1, 10, 0)) == 0.0
+        assert horas_habiles_entre(datetime(2026, 11, 2, 10, 0), datetime(2026, 11, 2, 9, 0)) == 0.0

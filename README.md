@@ -1,7 +1,7 @@
 # Biblioteca: Sistema de Préstamos Interbibliotecarios
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-52%20passed-brightgreen.svg)](tests/)
 [![ORM](https://img.shields.io/badge/ORM-SQLAlchemy%202.0-red.svg)](https://www.sqlalchemy.org/)
 [![GUI](https://img.shields.io/badge/GUI-Tkinter-orange.svg)](https://docs.python.org/3/library/tkinter.html)
 [![License](https://img.shields.io/badge/license-Academic%20%2F%20MIT-lightgrey.svg)]()
@@ -21,7 +21,7 @@
 
 **Biblioteca** es una solución integral de escritorio orientada a objetos para la administración y logística de una red de bibliotecas públicas interconectadas. El sistema resuelve la problemática habitual del seguimiento manual y disperso del inventario bibliográfico, permitiendo coordinar traslados físicos de ejemplares entre distintas sedes mediante remitos con trazabilidad de estados en tiempo real.
 
-A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicación incorpora de manera nativa la gestión de **préstamos interbibliotecarios**, el control automatizado de sanciones económicas por mora o deterioro, notificaciones automáticas de reservas y una arquitectura por capas estrictamente desacoplada (**DAO + Servicios + Modelos ORM**) que implementa patrones de diseño formales (**GoF**) para modelar procesos críticos de negocio.
+A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicación incorpora de manera nativa la gestión de **préstamos interbibliotecarios**, el control automatizado de sanciones económicas por demora en la devolución o deterioro, notificaciones automáticas de reservas y una arquitectura por capas estrictamente desacoplada (**DAO + Servicios + Modelos ORM**) que implementa patrones de diseño formales (**GoF**) para modelar procesos críticos de negocio.
 
 ---
 
@@ -31,7 +31,7 @@ A diferencia de los sistemas de biblioteca convencionales monosede, esta aplicac
 * **Catálogo y Control de Ejemplares Físicos:** Registro de libros y autores con relación muchos a muchos ($N:M$), asignando cada unidad física estrictamente a su sede de radicación.
 * **Préstamos Locales e Interbibliotecarios:** Diferenciación operativa entre retiros en sede y traslados logísticos inter-sedes.
 * **Trazabilidad Logística con Patrón State:** Ciclo de vida estricto del remito interbibliotecario (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`, con soporte para registro y resolución de incidencias en tránsito).
-* **Cálculo de Sanciones con Patrón Strategy:** Políticas dinámicas e intercambiables para el cálculo de multas diarias por mora (`MultaEstandar`, `MultaReducidaEstudiante`, `SinMultaPromocional`), con reactivación automática del socio al regularizar la deuda.
+* **Cálculo de Sanciones con Patrón Strategy:** Políticas dinámicas e intercambiables para el cálculo de multas diarias por demora en la devolución (`MultaEstandar`, `MultaReducidaEstudiante`, `SinMultaPromocional`), con reactivación automática del socio al regularizar la deuda.
 * **Notificaciones de Reservas con Patrón Observer:** Cuando un ejemplar prestado es devuelto en estado `Disponible`, el sujeto observable (`DisponibilidadEjemplarSubject`) notifica automáticamente a todos los socios suscriptos en lista de espera (`SocioObserver`).
 * **Validaciones de Negocio Obligatorias (RN-01 a RN-05 y SUP-01 a SUP-08):** Bloqueo preventivo de socios con deuda o inhabilitados, límite de préstamos simultáneos, verificación de disponibilidad física del material, pertenencia de sede y bloqueo de operaciones en sedes dadas de baja.
 * **Reportes Analíticos No Triviales:** Consultas analíticas avanzadas con JOINs múltiples, funciones de agregación, agrupamientos y filtros (`CASE`, `COALESCE`, `COUNT`, `SUM`).
@@ -91,7 +91,7 @@ python main.py
 
 ## 🧪 Ejecución de Pruebas (Tests)
 
-El proyecto cuenta con una batería de **48 pruebas unitarias automatizadas** utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
+El proyecto cuenta con una batería de **52 pruebas unitarias automatizadas** utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
 
 ```bash
 pytest tests/ -v
@@ -99,10 +99,10 @@ pytest tests/ -v
 
 ### Cobertura de las suites actuales:
 * **`tests/test_remitos_state.py` (9 tests):** Valida las transiciones del patrón State (`Empaquetado` $\rightarrow$ `Despachado` $\rightarrow$ `Recibido`), prohibición de transiciones inválidas, manejo y resolución de incidencias en trayecto.
-* **`tests/test_multas.py` (12 tests):** Valida las estrategias concretas del patrón Strategy, el selector dinámico de tarifas, cálculo por días de mora, cargos por daño/extravío, pago, condonación y reactivación del socio.
+* **`tests/test_multas.py` (12 tests):** Valida las estrategias concretas del patrón Strategy, el selector dinámico de tarifas, cálculo por días de retraso, cargos por daño/extravío, pago, condonación y reactivación del socio.
 * **`tests/test_prestamos.py` (11 tests):** Valida las reglas de negocio RN-01 a RN-04, los supuestos SUP-04, SUP-07 y SUP-08, préstamos locales vs. interbibliotecarios y devoluciones.
-* **`tests/test_reservas.py` (7 tests):** Valida la creación de reservas con stock agotado (SUP-06), límite de préstamos (SUP-04), cancelaciones y caducidad automática a las 48h (SUP-05).
-* **`tests/test_observer.py` (5 tests):** Valida la estructura del patrón Observer (`Subject`, `Observer`, `attach`, `detach`, `notify`) y su disparo automático al registrar la devolución de un ejemplar con reservas pendientes.
+* **`tests/test_reservas.py` (10 tests):** Valida la creación de reservas con stock agotado (SUP-06), límite de préstamos (SUP-04), cancelaciones y caducidad automática tras 48 horas hábiles desde la notificación de disponibilidad (SUP-05).
+* **`tests/test_observer.py` (6 tests):** Valida la estructura del patrón Observer (`Subject`, `Observer`, `attach`, `detach`, `notify`), su disparo automático al registrar la devolución de un ejemplar con reservas pendientes y el inicio del plazo de caducidad (`fecha_notificacion`).
 * **`tests/test_reportes.py` (4 tests):** Valida la ejecución y estructura de los 4 reportes analíticos no triviales.
 
 ---

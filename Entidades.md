@@ -69,6 +69,7 @@
 * **Reserva**
     * `id` (PK)
     * `fecha_reserva`
+    * `fecha_notificacion` (Opcional — se registra al notificar disponibilidad del ejemplar)
     * `estado` (Pendiente, Concretada, Cancelada, Caducada)
     * `socio_id` (FK hacia Socio)
     * `libro_id` (FK hacia Libro)
@@ -176,6 +177,7 @@ erDiagram
     RESERVA {
         int id PK
         datetime fecha_reserva
+        datetime fecha_notificacion
         string estado
         int socio_id FK
         int libro_id FK
@@ -279,6 +281,7 @@ classDiagram
     class Reserva {
         +int id
         +datetime fecha_reserva
+        +datetime fecha_notificacion
         +str estado
         +int socio_id
         +int libro_id

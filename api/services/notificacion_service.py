@@ -204,6 +204,16 @@ class NotificacionService:
         # 3. Cambiar el estado a 'Disponible' -> dispara sujeto.notify() -> obs.update()
         sujeto.cambiar_estado("Disponible")
 
+        # Iniciar el plazo de caducidad (SUP-05): 48 horas hábiles desde la notificación.
+        # Si la reserva ya había sido notificada se conserva la fecha original.
+        momento_notificacion = datetime.now()
+        reservas_por_id = {r.id: r for r in reservas_pendientes}
+        for obs in observadores:
+            reserva = reservas_por_id.get(obs.reserva_id)
+            if obs.notificado and reserva and reserva.fecha_notificacion is None:
+                reserva.fecha_notificacion = momento_notificacion
+        self.session.commit()
+
         # 4. Registrar las notificaciones emitidas para consulta en UI y auditoría
         emitidas: List[Dict[str, Any]] = []
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

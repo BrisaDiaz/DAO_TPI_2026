@@ -307,6 +307,7 @@ class ReservasView(ttk.Frame):
             ("libro", "Título de la Obra", 260),
             ("sede", "Sede de Retiro", 180),
             ("fecha", "Fecha de Reserva", 140),
+            ("notificada", "Notificada el", 140),
             ("estado", "Estado", 110),
         ]
 
@@ -331,7 +332,7 @@ class ReservasView(ttk.Frame):
 
         ttk.Button(
             actions_frame,
-            text="🔄 Procesar Caducidades (48h)",
+            text="🔄 Procesar Caducidades (48h hábiles)",
             command=self._procesar_caducidades,
         ).pack(side="left", padx=(0, 8))
 
@@ -383,6 +384,7 @@ class ReservasView(ttk.Frame):
                 "libro": r.libro.titulo if r.libro else f"ID {r.libro_id}",
                 "sede": r.sede.direccion if r.sede else f"ID {r.sede_id}",
                 "fecha": str(r.fecha_reserva)[:19] if r.fecha_reserva else "-",
+                "notificada": str(r.fecha_notificacion)[:19] if r.fecha_notificacion else "-",
                 "estado": r.estado,
             }
             for r in reservas
@@ -432,18 +434,19 @@ class ReservasView(ttk.Frame):
             messagebox.showerror("Error inesperado", str(e))
 
     def _procesar_caducidades(self) -> None:
-        """Ejecuta el control de caducidad automática a las 48h (SUP-05)."""
+        """Caduca las reservas notificadas que superaron las 48 horas hábiles (SUP-05)."""
         try:
             cant = self.reserva_service.procesar_caducidades()
             if cant > 0:
                 messagebox.showinfo(
                     "Caducidades Procesadas",
-                    f"Se han marcado {cant} reserva(s) como 'Caducada' por superar el plazo de 48 horas.",
+                    f"Se han marcado {cant} reserva(s) como 'Caducada' por superar las 48 horas hábiles "
+                    "desde la notificación de disponibilidad.",
                 )
             else:
                 messagebox.showinfo(
                     "Sin cambios",
-                    "No se encontraron reservas pendientes que superen las 48 horas de caducidad.",
+                    "No se encontraron reservas notificadas que superen las 48 horas hábiles de plazo.",
                 )
             self.cargar_datos()
         except Exception as e:

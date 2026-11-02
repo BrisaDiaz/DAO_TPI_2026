@@ -213,3 +213,33 @@ class TestObserverIntegracionDevolucion:
 
         assert len(prestamo_service.ultimas_notificaciones) == 0
         assert len(NotificacionService.obtener_historial()) == 0
+
+    def test_notificacion_inicia_plazo_de_caducidad(self, session, escenario_reserva):
+        """
+        SUP-05: al notificar la disponibilidad se registra `fecha_notificacion`,
+        que es el instante desde el cual corren las 48 horas hábiles.
+        """
+        d = escenario_reserva
+        prestamo_service = PrestamoService(session)
+        reserva_service = ReservaService(session)
+
+        prestamo = prestamo_service.registrar_prestamo(
+            socio_id=d["socio_prestamo"].id,
+            ejemplar_id=d["ejemplar"].id,
+            sede_origen_id=d["sede"].id,
+        )
+        reserva = reserva_service.crear_reserva(
+            socio_id=d["socio_espera_1"].id,
+            libro_id=d["libro"].id,
+            sede_id=d["sede"].id,
+        )
+        assert reserva.fecha_notificacion is None
+
+        prestamo_service.registrar_devolucion(
+            prestamo_id=prestamo.id,
+            estado_fisico_ejemplar="Disponible",
+        )
+
+        session.refresh(reserva)
+        assert reserva.fecha_notificacion is not None
+        assert reserva.estado == "Pendiente"
