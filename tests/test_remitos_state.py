@@ -156,3 +156,12 @@ class TestStateRemito:
         # Simular reconstrucción desde la BD
         contexto = RemitoContexto(remito)
         assert contexto.obtener_estado() == "Despachado"
+
+    def test_rn04_no_iniciar_envio_hacia_sede_dada_de_baja(self, session, prestamo_inter):
+        """RN-04: No se puede emitir un remito hacia o desde una sede dada de baja."""
+        prestamo_inter.sede_destino.estado = "baja"
+        session.commit()
+
+        service = LogisticaService(session)
+        with pytest.raises(ValueError, match="dada de baja"):
+            service.crear_remito(prestamo_inter, "REM-TEST-BAJA")

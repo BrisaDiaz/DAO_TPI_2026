@@ -286,7 +286,7 @@ class ReservasView(ttk.Frame):
         ttk.Label(filter_frame, text="Estado:", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(5, 5))
         self.combo_filtro_estado = ttk.Combobox(
             filter_frame,
-            values=["Todas", "Solo Pendientes", "Solo Canceladas", "Solo Caducadas"],
+            values=["Todas", "Solo Pendientes", "Solo Concretadas", "Solo Canceladas", "Solo Caducadas"],
             state="readonly",
             width=18,
             font=("Segoe UI", 9),
@@ -364,6 +364,8 @@ class ReservasView(ttk.Frame):
 
         if filtro_estado == "Solo Pendientes":
             reservas = [r for r in reservas if r.estado == "Pendiente"]
+        elif filtro_estado == "Solo Concretadas":
+            reservas = [r for r in reservas if r.estado == "Concretada"]
         elif filtro_estado == "Solo Canceladas":
             reservas = [r for r in reservas if r.estado == "Cancelada"]
         elif filtro_estado == "Solo Caducadas":

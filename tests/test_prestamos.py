@@ -9,6 +9,9 @@ from sqlalchemy.orm import sessionmaker
 
 from api.database import Base
 from api.models import Sede, Socio, Libro, Ejemplar, Prestamo, Multa
+from api.dao.socio_dao import SocioDAO
+from api.dao.libro_dao import LibroDAO
+from api.dao.ejemplar_dao import EjemplarDAO
 from api.services.prestamo_service import PrestamoService
 
 
@@ -146,6 +149,93 @@ class TestReglasNegocioPrestamos:
                 ejemplar_id=d["ej_disponible_1"].id,
                 sede_origen_id=d["sede_baja"].id,
             )
+
+    def test_rn02_socio_con_prestamo_vencido_sin_devolver(self, session, datos_completos):
+        """RN-02 / Control de vencimiento: No se puede prestar a un socio con un préstamo activo vencido."""
+        d = datos_completos
+        service = PrestamoService(session)
+
+        prestamo_vencido = Prestamo(
+            socio_id=d["socio_ok"].id,
+            ejemplar_id=d["ej_disponible_1"].id,
+            sede_origen_id=d["sede_a"].id,
+            fecha_devolucion_estimada=date.today() - timedelta(days=2),
+            estado="Activo",
+        )
+        session.add(prestamo_vencido)
+        d["ej_disponible_1"].estado_fisico = "Prestado"
+        session.commit()
+
+        with pytest.raises(ValueError, match="vencido"):
+            service.registrar_prestamo(
+                socio_id=d["socio_ok"].id,
+                ejemplar_id=d["ej_disponible_2"].id,
+                sede_origen_id=d["sede_a"].id,
+            )
+
+    def test_rn03_interbibliotecario_ejemplar_de_otra_sede(self, session, datos_completos):
+        """RN-03: Tampoco en un préstamo interbibliotecario se puede prestar un ejemplar ajeno a la sede de origen."""
+        d = datos_completos
+        service = PrestamoService(session)
+
+        with pytest.raises(ValueError, match="misma sede"):
+            service.registrar_prestamo(
+                socio_id=d["socio_ok"].id,
+                ejemplar_id=d["ej_otra_sede"].id,
+                sede_origen_id=d["sede_a"].id,
+                sede_destino_id=d["sede_b"].id,
+            )
+
+    def test_rn04_sede_destino_dada_de_baja(self, session, datos_completos):
+        """RN-04: No se permite iniciar un préstamo interbibliotecario hacia una sede dada de baja."""
+        d = datos_completos
+        service = PrestamoService(session)
+
+        with pytest.raises(ValueError, match="dada de baja"):
+            service.registrar_prestamo(
+                socio_id=d["socio_ok"].id,
+                ejemplar_id=d["ej_disponible_1"].id,
+                sede_origen_id=d["sede_a"].id,
+                sede_destino_id=d["sede_baja"].id,
+            )
+
+    def test_rn05_evitar_duplicados_socio_libro_ejemplar(self, session, datos_completos):
+        """RN-05: Evitar duplicados en socios (documento y nro socio), catálogo (ISBN) y ejemplares (código)."""
+        d = datos_completos
+        socio_dao = SocioDAO(session)
+        libro_dao = LibroDAO(session)
+        ejemplar_dao = EjemplarDAO(session)
+
+        with pytest.raises(ValueError, match="documento"):
+            socio_dao.crear(Socio(
+                numero_socio="SOC-999", documento=d["socio_ok"].documento,
+                nombre="Dup", apellido="Doc", email="d@mail.com", telefono="123"
+            ))
+
+        with pytest.raises(ValueError, match="ISBN"):
+            libro_dao.crear(Libro(
+                isbn=d["libro"].isbn, titulo="Clon", editorial="Ed", anio=2025
+            ))
+
+        with pytest.raises(ValueError, match="código de inventario"):
+            ejemplar_dao.crear(Ejemplar(
+                codigo_inventario=d["ej_disponible_1"].codigo_inventario,
+                estado_fisico="Disponible", libro_id=d["libro"].id, sede_id=d["sede_a"].id
+            ))
+
+    def test_sup03_bloqueo_devolucion_interbibliotecaria_sin_remito_recibido(self, session, datos_completos):
+        """SUP-03: No se puede devolver un préstamo interbibliotecario mientras el remito no esté 'Recibido'."""
+        d = datos_completos
+        service = PrestamoService(session)
+
+        prestamo = service.registrar_prestamo(
+            socio_id=d["socio_ok"].id,
+            ejemplar_id=d["ej_disponible_1"].id,
+            sede_origen_id=d["sede_a"].id,
+            sede_destino_id=d["sede_b"].id,
+        )
+        with pytest.raises(ValueError, match="Recibido"):
+            service.registrar_devolucion(prestamo.id)
 
     # ────────────────────────────────────────────────────────────────────────
     # Nuevos Tests para Supuestos (SUP-04, SUP-07, SUP-08)

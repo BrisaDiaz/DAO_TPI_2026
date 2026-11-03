@@ -243,3 +243,70 @@ class TestObserverIntegracionDevolucion:
         session.refresh(reserva)
         assert reserva.fecha_notificacion is not None
         assert reserva.estado == "Pendiente"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tests: Concreción de la reserva al retirar el ejemplar
+# ─────────────────────────────────────────────────────────────────────────────
+class TestReservaConcretada:
+    """Valida que el préstamo al socio notificado concrete su reserva pendiente."""
+
+    def _prestar_y_reservar(self, session, d):
+        prestamo_service = PrestamoService(session)
+        reserva_service = ReservaService(session)
+        prestamo = prestamo_service.registrar_prestamo(
+            socio_id=d["socio_prestamo"].id,
+            ejemplar_id=d["ejemplar"].id,
+            sede_origen_id=d["sede"].id,
+        )
+        reserva_1 = reserva_service.crear_reserva(
+            socio_id=d["socio_espera_1"].id, libro_id=d["libro"].id, sede_id=d["sede"].id,
+        )
+        reserva_2 = reserva_service.crear_reserva(
+            socio_id=d["socio_espera_2"].id, libro_id=d["libro"].id, sede_id=d["sede"].id,
+        )
+        prestamo_service.registrar_devolucion(prestamo.id, "Disponible")
+        return prestamo_service, reserva_1, reserva_2
+
+    def test_prestamo_al_socio_notificado_concreta_su_reserva(self, session, escenario_reserva):
+        """Al retirar el ejemplar, la reserva del socio pasa a 'Concretada' y la del resto sigue 'Pendiente'."""
+        d = escenario_reserva
+        prestamo_service, reserva_1, reserva_2 = self._prestar_y_reservar(session, d)
+
+        prestamo_service.registrar_prestamo(
+            socio_id=d["socio_espera_1"].id,
+            ejemplar_id=d["ejemplar"].id,
+            sede_origen_id=d["sede"].id,
+        )
+
+        session.refresh(reserva_1)
+        session.refresh(reserva_2)
+        assert reserva_1.estado == "Concretada"
+        assert reserva_2.estado == "Pendiente"
+        assert [r.id for r in prestamo_service.ultimas_reservas_concretadas] == [reserva_1.id]
+
+    def test_reserva_concretada_no_vuelve_a_notificarse(self, session, escenario_reserva):
+        """En la siguiente devolución solo se notifica a quienes siguen en lista de espera."""
+        d = escenario_reserva
+        prestamo_service, _, _ = self._prestar_y_reservar(session, d)
+
+        prestamo_2 = prestamo_service.registrar_prestamo(
+            socio_id=d["socio_espera_1"].id,
+            ejemplar_id=d["ejemplar"].id,
+            sede_origen_id=d["sede"].id,
+        )
+        prestamo_service.registrar_devolucion(prestamo_2.id, "Disponible")
+
+        emails = [n["email"] for n in prestamo_service.ultimas_notificaciones]
+        assert emails == ["carlos@mail.com"]
+
+    def test_prestamo_sin_reserva_no_concreta_nada(self, session, escenario_reserva):
+        """Un préstamo de un socio sin reservas pendientes no modifica ninguna reserva."""
+        d = escenario_reserva
+        prestamo_service = PrestamoService(session)
+        prestamo_service.registrar_prestamo(
+            socio_id=d["socio_prestamo"].id,
+            ejemplar_id=d["ejemplar"].id,
+            sede_origen_id=d["sede"].id,
+        )
+        assert prestamo_service.ultimas_reservas_concretadas == []

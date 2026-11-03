@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 
 from sqlalchemy.orm import Session
 
-from api.models import Prestamo, Ejemplar, Socio, Sede, Multa
+from api.models import Prestamo, Ejemplar, Socio, Sede, Multa, Reserva
 from api.dao.prestamo_dao import PrestamoDAO
 from api.dao.ejemplar_dao import EjemplarDAO
 from api.dao.socio_dao import SocioDAO
@@ -20,6 +20,7 @@ from api.dao.multa_dao import MultaDAO
 from api.services.multa_service import MultaService
 from api.services.logistica_service import LogisticaService
 from api.services.notificacion_service import NotificacionService
+from api.services.reserva_service import ReservaService
 
 
 class PrestamoService:
@@ -39,7 +40,9 @@ class PrestamoService:
         self.multa_service = MultaService(session)
         self.logistica_service = LogisticaService(session)
         self.notificacion_service = NotificacionService(session)
+        self.reserva_service = ReservaService(session)
         self.ultimas_notificaciones: List[Dict[str, Any]] = []
+        self.ultimas_reservas_concretadas: List[Reserva] = []
 
     # ─────────────────────────────────────────────────────────────────────────
     # Alta de Préstamo
@@ -101,6 +104,20 @@ class PrestamoService:
                 f"{len(multas_pendientes)} multa(s) pendiente(s) de pago."
             )
 
+        prestamos_vencidos = self.session.query(Prestamo).filter(
+            Prestamo.socio_id == socio_id,
+            Prestamo.estado.in_(["Activo", "Vencido"]),
+            Prestamo.fecha_devolucion_estimada < date.today(),
+        ).count()
+        if prestamos_vencidos > 0:
+            raise ValueError(
+                f"El socio '{socio.nombre} {socio.apellido}' posee "
+                f"{prestamos_vencidos} préstamo(s) vencido(s) sin devolver."
+            )
+
+        if dias_prestamo is not None and dias_prestamo <= 0:
+            raise ValueError("La cantidad de días de préstamo debe ser mayor a cero.")
+
         # SUP-04: Control de límite máximo de préstamos activos (hasta 3)
         prestamos_activos = self.session.query(Prestamo).filter(
             Prestamo.socio_id == socio_id,
@@ -120,14 +137,14 @@ class PrestamoService:
                 f"Estado actual: {ejemplar.estado_fisico}."
             )
 
-        # RN-03: Pertenencia de sede (préstamo local)
+        # RN-03: Pertenencia de sede (el ejemplar debe pertenecer a la sede de origen)
         es_interbibliotecario = (
             sede_destino_id is not None and sede_destino_id != sede_origen_id
         )
-        if not es_interbibliotecario and ejemplar.sede_id != sede_origen_id:
+        if ejemplar.sede_id != sede_origen_id:
             raise ValueError(
-                "Un préstamo local solo puede realizarse con ejemplares pertenecientes "
-                f"a la misma sede. El ejemplar pertenece a la sede ID {ejemplar.sede_id}."
+                "El ejemplar debe pertenecer a la misma sede de origen del préstamo. "
+                f"El ejemplar pertenece a la sede ID {ejemplar.sede_id}."
             )
 
         # RN-04: Sede destino activa (si es interbibliotecario)
@@ -155,6 +172,12 @@ class PrestamoService:
 
         # Actualizar el estado del ejemplar
         ejemplar.estado_fisico = "Prestado"
+
+        # Si el socio tenía una reserva pendiente de esta obra, el préstamo la concreta
+        self.ultimas_reservas_concretadas = self.reserva_service.concretar_reservas_del_socio(
+            socio_id=socio_id,
+            libro_id=ejemplar.libro_id,
+        )
         self.session.commit()
 
         # Si es interbibliotecario, generar el remito automáticamente

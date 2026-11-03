@@ -221,7 +221,14 @@ class PrestamoFormModal(tk.Toplevel):
                 sede_destino_id=sede_destino_id,
                 dias_prestamo=dias,
             )
-            messagebox.showinfo("Préstamo registrado", "El préstamo fue registrado exitosamente.", parent=self)
+            mensaje = "El préstamo fue registrado exitosamente."
+            if self.prestamo_service.ultimas_reservas_concretadas:
+                ids = ", ".join(f"#{r.id}" for r in self.prestamo_service.ultimas_reservas_concretadas)
+                mensaje += (
+                    f"\n\n📌 El socio tenía una reserva pendiente de esta obra ({ids}); "
+                    "quedó en estado 'Concretada'."
+                )
+            messagebox.showinfo("Préstamo registrado", mensaje, parent=self)
             if self.on_guardar_callback:
                 self.on_guardar_callback()
             self.destroy()
@@ -616,6 +623,21 @@ class PrestamosView(ttk.Frame):
                 f"El préstamo #{prestamo_id} ya fue devuelto o no se encuentra activo.",
             )
             return
+
+        # SUP-03: un préstamo interbibliotecario solo se puede devolver con su remito 'Recibido'.
+        # Se avisa antes de abrir el modal para guiar al operador hacia la pestaña de remitos.
+        es_inter = prestamo.sede_destino_id and prestamo.sede_destino_id != prestamo.sede_origen_id
+        if es_inter:
+            remito = self.remito_dao.obtener_por_prestamo(prestamo.id)
+            if remito and remito.estado != "Recibido":
+                messagebox.showwarning(
+                    "Remito pendiente de recepción",
+                    f"El préstamo #{prestamo_id} es interbibliotecario y su remito "
+                    f"«{remito.codigo_remito}» está en estado '{remito.estado}'.\n\n"
+                    "Para registrar la devolución, primero avance el remito hasta 'Recibido' "
+                    "desde la pestaña «📦 Remitos en tránsito» (botón «▶ Avanzar estado de remito»).",
+                )
+                return
 
         DevolucionModal(
             parent=self.winfo_toplevel(),

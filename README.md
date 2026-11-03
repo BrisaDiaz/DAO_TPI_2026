@@ -91,7 +91,7 @@ python main.py
 
 ## 🧪 Ejecución de Pruebas (Tests)
 
-El proyecto cuenta con una batería de **52 pruebas unitarias automatizadas** utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
+El proyecto cuenta con una batería de **61 pruebas unitarias automatizadas** utilizando **Pytest**, cubriendo el ciclo de vida de los patrones y las reglas de validación:
 
 ```bash
 pytest tests/ -v
@@ -102,7 +102,7 @@ pytest tests/ -v
 * **`tests/test_multas.py` (12 tests):** Valida las estrategias concretas del patrón Strategy, el selector dinámico de tarifas, cálculo por días de retraso, cargos por daño/extravío, pago, condonación y reactivación del socio.
 * **`tests/test_prestamos.py` (11 tests):** Valida las reglas de negocio RN-01 a RN-04, los supuestos SUP-04, SUP-07 y SUP-08, préstamos locales vs. interbibliotecarios y devoluciones.
 * **`tests/test_reservas.py` (10 tests):** Valida la creación de reservas con stock agotado (SUP-06), límite de préstamos (SUP-04), cancelaciones y caducidad automática tras 48 horas hábiles desde la notificación de disponibilidad (SUP-05).
-* **`tests/test_observer.py` (6 tests):** Valida la estructura del patrón Observer (`Subject`, `Observer`, `attach`, `detach`, `notify`), su disparo automático al registrar la devolución de un ejemplar con reservas pendientes y el inicio del plazo de caducidad (`fecha_notificacion`).
+* **`tests/test_observer.py` (9 tests):** Valida la estructura del patrón Observer (`Subject`, `Observer`, `attach`, `detach`, `notify`), su disparo automático al registrar la devolución de un ejemplar con reservas pendientes, el inicio del plazo de caducidad (`fecha_notificacion`) y la concreción de la reserva cuando el socio retira el ejemplar (estado `Concretada`).
 * **`tests/test_reportes.py` (4 tests):** Valida la ejecución y estructura de los 4 reportes analíticos no triviales.
 
 ---

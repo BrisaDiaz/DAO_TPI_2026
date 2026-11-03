@@ -150,6 +150,17 @@ class LogisticaService:
                 "(sede origen ≠ sede destino)."
             )
 
+        if prestamo.sede_origen and prestamo.sede_origen.estado != "activo":
+            raise ValueError(
+                f"La sede de origen '{prestamo.sede_origen.direccion}' se encuentra dada de baja. "
+                "No se pueden iniciar envíos desde una sede inactiva."
+            )
+        if prestamo.sede_destino and prestamo.sede_destino.estado != "activo":
+            raise ValueError(
+                f"La sede de destino '{prestamo.sede_destino.direccion}' se encuentra dada de baja. "
+                "No se pueden iniciar envíos hacia una sede inactiva."
+            )
+
         existente = self.remito_dao.obtener_por_prestamo(prestamo.id)
         if existente:
             raise ValueError(

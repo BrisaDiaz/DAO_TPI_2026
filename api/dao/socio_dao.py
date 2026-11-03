@@ -11,6 +11,18 @@ class SocioDAO(BaseDAO[Socio]):
     def __init__(self, session: Session):
         super().__init__(session, Socio)
 
+    def crear(self, entidad: Socio) -> Socio:
+        """Persiste un nuevo socio validando no duplicidad de documento y número de socio (RN-05)."""
+        if entidad.documento and self.obtener_por_documento(entidad.documento):
+            raise ValueError(
+                f"Ya existe un socio registrado con el documento '{entidad.documento}' (RN-05)."
+            )
+        if entidad.numero_socio and self.obtener_por_numero_socio(entidad.numero_socio):
+            raise ValueError(
+                f"Ya existe un socio registrado con el número de socio '{entidad.numero_socio}' (RN-05)."
+            )
+        return super().crear(entidad)
+
     def obtener_por_documento(self, documento: str) -> Socio | None:
         """Busca un socio por su número de documento (DNI)."""
         return self.session.query(Socio).filter(Socio.documento == documento).first()

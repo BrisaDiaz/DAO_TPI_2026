@@ -164,6 +164,10 @@ class MainWindow(tk.Tk):
         self.notebook.add(self.vista_reservas, text=" 📌 Reservas ")
         self.notebook.add(self.vista_reportes, text=" 📊 Informes & Estadísticas ")
 
+        # Refrescar la vista al cambiar de pestaña para que refleje las operaciones
+        # realizadas en otras pestañas (p. ej. devoluciones -> reservas notificadas).
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+
         # 3. Barra de Estado inferior
         status_frame = tk.Frame(self, bg="#F1F5F9", height=26, relief="groove", borderwidth=1)
         status_frame.grid(row=2, column=0, sticky="ew")
@@ -185,6 +189,19 @@ class MainWindow(tk.Tk):
             bg="#F1F5F9",
         )
         lbl_info.pack(side="right", padx=15)
+
+    def _on_tab_changed(self, _event=None) -> None:
+        """Recarga los datos de la pestaña seleccionada."""
+        try:
+            vista = self.nametowidget(self.notebook.select())
+        except (KeyError, tk.TclError):
+            return
+        refrescar = getattr(vista, "cargar_datos", None) or getattr(vista, "ejecutar_reporte", None)
+        if callable(refrescar):
+            try:
+                refrescar()
+            except Exception:
+                self.db_session.rollback()
 
     def _on_closing(self) -> None:
         """Cierra de forma limpia la sesión de base de datos al salir."""

@@ -153,6 +153,26 @@ class ReservaService:
         self.reserva_dao.actualizar()
         return reserva
 
+    def concretar_reservas_del_socio(self, socio_id: int, libro_id: int) -> list[Reserva]:
+        """
+        Marca como 'Concretada' la reserva pendiente que el socio tenga sobre la obra
+        cuando finalmente retira un ejemplar de ella mediante un préstamo.
+
+        De esta forma la reserva sale de la lista de espera: no vuelve a ser notificada
+        por el Patrón Observer ni puede caducar (SUP-05).
+        No confirma la transacción: el llamador (PrestamoService) la confirma junto
+        con el alta del préstamo.
+        Retorna las reservas concretadas (normalmente una sola, ya que no se permiten
+        dos reservas pendientes del mismo socio para la misma obra).
+        """
+        reservas = [
+            r for r in self.reserva_dao.obtener_pendientes_por_socio(socio_id)
+            if r.libro_id == libro_id
+        ]
+        for reserva in reservas:
+            reserva.estado = "Concretada"
+        return reservas
+
     def procesar_caducidades(self, ahora: datetime | None = None) -> int:
         """
         SUP-05: Caduca las reservas pendientes que, una vez notificada la disponibilidad

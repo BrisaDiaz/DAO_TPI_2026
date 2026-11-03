@@ -11,6 +11,14 @@ class LibroDAO(BaseDAO[Libro]):
     def __init__(self, session: Session):
         super().__init__(session, Libro)
 
+    def crear(self, entidad: Libro) -> Libro:
+        """Persiste un nuevo libro validando no duplicidad de ISBN (RN-05)."""
+        if entidad.isbn and self.obtener_por_isbn(entidad.isbn):
+            raise ValueError(
+                f"Ya existe un libro registrado en el catálogo con el ISBN '{entidad.isbn}' (RN-05)."
+            )
+        return super().crear(entidad)
+
     def obtener_por_isbn(self, isbn: str) -> Libro | None:
         """Busca un libro por su ISBN único."""
         return self.session.query(Libro).filter(Libro.isbn == isbn).first()

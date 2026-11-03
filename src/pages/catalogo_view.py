@@ -14,6 +14,7 @@ from api.models import Libro, Autor, Ejemplar, Sede
 from api.dao.libro_dao import LibroDAO, AutorDAO
 from api.dao.ejemplar_dao import EjemplarDAO
 from api.dao.sede_dao import SedeDAO
+from api.services.notificacion_service import NotificacionService
 from src.components.treeview_table import TreeviewTable
 
 
@@ -420,21 +421,37 @@ class EjemplarFormModal(tk.Toplevel):
             return
 
         try:
+            estaba_disponible = bool(
+                self.ejemplar
+                and self.ejemplar.estado_fisico == "Disponible"
+                and self.ejemplar.sede_id == sede_seleccionada.id
+            )
             if self.ejemplar:
                 self.ejemplar.codigo_inventario = codigo
                 self.ejemplar.sede_id = sede_seleccionada.id
                 self.ejemplar.estado_fisico = estado
                 self.ejemplar_dao.actualizar()
-                messagebox.showinfo("Éxito", "Ejemplar actualizado correctamente.", parent=self)
+                ejemplar_obj = self.ejemplar
+                msg_base = "Ejemplar actualizado correctamente."
             else:
-                nuevo = Ejemplar(
+                ejemplar_obj = Ejemplar(
                     codigo_inventario=codigo,
                     estado_fisico=estado,
                     libro_id=self.libro.id,
                     sede_id=sede_seleccionada.id,
                 )
-                self.ejemplar_dao.crear(nuevo)
-                messagebox.showinfo("Éxito", "Ejemplar incorporado al inventario exitosamente.", parent=self)
+                self.ejemplar_dao.crear(ejemplar_obj)
+                msg_base = "Ejemplar incorporado al inventario exitosamente."
+
+            if estado == "Disponible" and not estaba_disponible:
+                notificaciones = NotificacionService(self.session).notificar_disponibilidad_ejemplar(ejemplar_obj)
+                if notificaciones:
+                    detalle_obs = "\n".join(f"• {n['socio']} ({n['email']})" for n in notificaciones)
+                    msg_base += (
+                        f"\n\n🔔 Patrón Observer disparado ({len(notificaciones)} socio(s) en lista de espera notificado(s)):\n"
+                        f"{detalle_obs}"
+                    )
+            messagebox.showinfo("Éxito", msg_base, parent=self)
 
             if self.on_guardar_callback:
                 self.on_guardar_callback()
@@ -787,10 +804,14 @@ class CatalogoView(ttk.Frame):
 
     def cargar_datos(self) -> None:
         """Carga y filtra el catálogo de obras con balance de ejemplares."""
+        self.sedes_lista = self.sede_dao.obtener_todos()
+        self.combo_sede_filtro["values"] = ["Todas las Sedes"] + [s.direccion for s in self.sedes_lista]
+
         filtro_texto = self.txt_buscar.get().strip().lower()
         filtro_sede = self.combo_sede_filtro.get()
 
         libros = self.libro_dao.obtener_todos()
+        sede_obj = None
 
         # Filtrar por sede si se seleccionó una sede específica
         if filtro_sede != "Todas las Sedes":
@@ -813,6 +834,8 @@ class CatalogoView(ttk.Frame):
         for l in libros:
             autores_str = ", ".join(f"{a.nombre} {a.apellido}" for a in l.autores) if l.autores else "Sin autor"
             ejemplares_lista = l.ejemplares if hasattr(l, "ejemplares") else []
+            if sede_obj is not None:
+                ejemplares_lista = [e for e in ejemplares_lista if e.sede_id == sede_obj.id]
             total_ej = len(ejemplares_lista)
             disp_ej = sum(1 for e in ejemplares_lista if e.estado_fisico == "Disponible")
             anio_val = getattr(l, "anio", getattr(l, "anio_edicion", "-"))
