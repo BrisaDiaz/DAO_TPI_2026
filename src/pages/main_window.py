@@ -89,19 +89,24 @@ class MainWindow(tk.Tk):
             rowheight=28,
             background="#FFFFFF",
             fieldbackground="#FFFFFF",
+            bordercolor="#CBD5E1",
             borderwidth=1,
         )
         self.style.configure(
             "Treeview.Heading",
             font=("Segoe UI", 10, "bold"),
-            background="#F1F5F9",
+            background="#E2E8F0",
             foreground="#1E293B",
-            relief="flat",
-            padding=(6, 6),
+            relief="solid",
+            borderwidth=1,
+            bordercolor="#CBD5E1",
+            lightcolor="#CBD5E1",
+            darkcolor="#CBD5E1",
+            padding=(8, 6),
         )
         self.style.map(
             "Treeview.Heading",
-            background=[("active", "#E2E8F0")],
+            background=[("active", "#CBD5E1")],
         )
         self.style.map(
             "Treeview",

@@ -1,9 +1,13 @@
 """
 Vista de Informes y Estadísticas.
 Permite visualizar reportes analíticos y operativos del sistema bibliotecario.
+
+Cada informe se presenta en un menú de pestañas internas: la primera conserva
+la grilla de datos y las siguientes están reservadas a los gráficos de torta.
 """
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 from sqlalchemy.orm import Session
 
 from api.services.reporte_service import ReporteService
@@ -18,6 +22,26 @@ class ReportesView(ttk.Frame):
         self.session = session
         self.reporte_service = ReporteService(session)
 
+        # Gráficos de torta previstos por informe (título de la pestaña, descripción)
+        self.graficos_por_informe = {
+            0: [
+                ("🥧 Estados Logísticos", "Distribución de los préstamos activos según el estado logístico del remito."),
+                ("🥧 Locales vs. Inter-sedes", "Proporción de préstamos locales frente a interbibliotecarios."),
+            ],
+            1: [
+                ("🥧 Estado de las Multas", "Proporción de multas pendientes, pagadas y condonadas."),
+                ("🥧 Estado de Cuenta de Socios", "Socios habilitados frente a inhabilitados por deuda."),
+            ],
+            2: [
+                ("🥧 Participación por Libro", "Participación de cada obra en el total de solicitudes inter-sedes."),
+            ],
+            3: [
+                ("🥧 Disponibilidad Global", "Ejemplares disponibles frente a no disponibles en toda la red."),
+                ("🥧 Ejemplares por Sede", "Distribución del inventario total entre las sedes activas."),
+            ],
+        }
+
+        self._indice_actual: Optional[int] = None
         self._crear_interfaz()
 
     def _crear_interfaz(self) -> None:
@@ -41,7 +65,7 @@ class ReportesView(ttk.Frame):
             foreground="#64748B",
         ).pack(anchor="w", pady=(2, 0))
 
-        # Selector de reporte
+        # Selector de reporte (actualización automática al seleccionar)
         selector_frame = ttk.Frame(self, padding="15 5")
         selector_frame.grid(row=1, column=0, sticky="ew")
 
@@ -65,28 +89,78 @@ class ReportesView(ttk.Frame):
         self.combo_reportes.pack(side="left", padx=10)
         self.combo_reportes.bind("<<ComboboxSelected>>", lambda e: self.ejecutar_reporte())
 
-        ttk.Button(
-            selector_frame,
-            text="▶ Consultar Informe",
-            command=self.ejecutar_reporte,
-        ).pack(side="left", padx=5)
-
-        # Contenedor para la tabla de resultados
+        # Contenedor del menú de pestañas del informe
         self.table_container = ttk.Frame(self, padding="15 5")
         self.table_container.grid(row=2, column=0, sticky="nsew")
         self.table_container.grid_rowconfigure(0, weight=1)
         self.table_container.grid_columnconfigure(0, weight=1)
 
-        self.tabla_actual: TreeviewTable | None = None
+        self.notebook_informe: Optional[ttk.Notebook] = None
+        self.tabla_actual: Optional[TreeviewTable] = None
         self.ejecutar_reporte()
 
     def ejecutar_reporte(self) -> None:
-        """Ejecuta el informe seleccionado y actualiza la grilla con sus columnas correspondientes."""
+        """Ejecuta el informe seleccionado y reconstruye su menú de pestañas (datos + gráficos)."""
         indice = self.combo_reportes.current()
 
-        if self.tabla_actual:
-            self.tabla_actual.destroy()
+        # Conservar la pestaña interna activa si se refresca el mismo informe
+        pestana_previa = 0
+        if self.notebook_informe is not None:
+            if indice == self._indice_actual:
+                try:
+                    pestana_previa = self.notebook_informe.index(self.notebook_informe.select())
+                except tk.TclError:
+                    pestana_previa = 0
+            self.notebook_informe.destroy()
 
+        self._indice_actual = indice
+
+        self.notebook_informe = ttk.Notebook(self.table_container)
+        self.notebook_informe.grid(row=0, column=0, sticky="nsew")
+
+        # Pestaña 1: datos actuales del informe
+        tab_datos = ttk.Frame(self.notebook_informe, padding=10)
+        tab_datos.grid_rowconfigure(0, weight=1)
+        tab_datos.grid_columnconfigure(0, weight=1)
+        self.notebook_informe.add(tab_datos, text="📋 Datos del informe")
+        self._construir_tabla(tab_datos, indice)
+
+        # Pestañas siguientes: un gráfico de torta por pestaña
+        for titulo, descripcion in self.graficos_por_informe.get(indice, []):
+            tab_grafico = ttk.Frame(self.notebook_informe, padding=20)
+            self.notebook_informe.add(tab_grafico, text=titulo)
+            self._construir_placeholder_grafico(tab_grafico, titulo, descripcion)
+
+        total_tabs = len(self.notebook_informe.tabs())
+        self.notebook_informe.select(pestana_previa if pestana_previa < total_tabs else 0)
+
+    def _construir_placeholder_grafico(self, parent: ttk.Frame, titulo: str, descripcion: str) -> None:
+        """Marcador de posición del gráfico de torta (se implementará a continuación)."""
+        parent.grid_rowconfigure(2, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
+
+        ttk.Label(
+            parent,
+            text=titulo.replace("🥧 ", ""),
+            font=("Segoe UI", 14, "bold"),
+        ).grid(row=0, column=0, sticky="w")
+
+        ttk.Label(
+            parent,
+            text=descripcion,
+            font=("Segoe UI", 10),
+            foreground="#64748B",
+        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+        ttk.Label(
+            parent,
+            text="Gráfico de torta próximamente",
+            font=("Segoe UI", 11, "italic"),
+            foreground="#94A3B8",
+        ).grid(row=2, column=0)
+
+    def _construir_tabla(self, parent: ttk.Frame, indice: int) -> None:
+        """Construye la grilla de datos correspondiente al informe seleccionado."""
         if indice == 0:
             columnas = [
                 ("id_prestamo", "ID", 50),
@@ -99,10 +173,7 @@ class ReportesView(ttk.Frame):
                 ("fecha_prestamo", "F. Préstamo", 100),
                 ("estado_logistico", "Estado Logístico", 150),
             ]
-            self.tabla_actual = TreeviewTable(self.table_container, columns=columnas)
-            self.tabla_actual.grid(row=0, column=0, sticky="nsew")
             datos = self.reporte_service.reporte_prestamos_activos_y_transito()
-            self.tabla_actual.cargar_datos(datos)
 
         elif indice == 1:
             columnas = [
@@ -115,10 +186,7 @@ class ReportesView(ttk.Frame):
                 ("multa_acumulada", "Multa Acumulada ($)", 130),
                 ("estado_cuenta", "Estado Cuenta", 140),
             ]
-            self.tabla_actual = TreeviewTable(self.table_container, columns=columnas)
-            self.tabla_actual.grid(row=0, column=0, sticky="nsew")
             datos = self.reporte_service.reporte_vencidos_y_multas()
-            self.tabla_actual.cargar_datos(datos)
 
         elif indice == 2:
             columnas = [
@@ -127,12 +195,9 @@ class ReportesView(ttk.Frame):
                 ("titulo", "Título del Libro", 350),
                 ("total_solicitudes_intersedes", "Total Solicitudes Inter-sedes", 180),
             ]
-            self.tabla_actual = TreeviewTable(self.table_container, columns=columnas)
-            self.tabla_actual.grid(row=0, column=0, sticky="nsew")
             datos = self.reporte_service.reporte_demanda_intersedes()
-            self.tabla_actual.cargar_datos(datos)
 
-        elif indice == 3:
+        else:
             columnas = [
                 ("sede", "Sede", 200),
                 ("isbn", "ISBN", 140),
@@ -141,7 +206,8 @@ class ReportesView(ttk.Frame):
                 ("ejemplares_disponibles", "Disponibles", 110),
                 ("ejemplares_no_disponibles", "No Disponibles", 110),
             ]
-            self.tabla_actual = TreeviewTable(self.table_container, columns=columnas)
-            self.tabla_actual.grid(row=0, column=0, sticky="nsew")
             datos = self.reporte_service.reporte_disponibilidad_por_sede()
-            self.tabla_actual.cargar_datos(datos)
+
+        self.tabla_actual = TreeviewTable(parent, columns=columnas, show_scrollbar_x=True)
+        self.tabla_actual.grid(row=0, column=0, sticky="nsew")
+        self.tabla_actual.cargar_datos(datos)
