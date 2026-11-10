@@ -1,9 +1,6 @@
 """
 Vista de Informes y Estadísticas.
 Permite visualizar reportes analíticos y operativos del sistema bibliotecario.
-
-Cada informe se presenta en un menú de pestañas internas: la primera conserva
-la grilla de datos y las siguientes están reservadas a los gráficos de torta.
 """
 import tkinter as tk
 from tkinter import ttk
@@ -22,26 +19,6 @@ class ReportesView(ttk.Frame):
         self.session = session
         self.reporte_service = ReporteService(session)
 
-        # Gráficos de torta previstos por informe (título de la pestaña, descripción)
-        self.graficos_por_informe = {
-            0: [
-                ("🥧 Estados Logísticos", "Distribución de los préstamos activos según el estado logístico del remito."),
-                ("🥧 Locales vs. Inter-sedes", "Proporción de préstamos locales frente a interbibliotecarios."),
-            ],
-            1: [
-                ("🥧 Estado de las Multas", "Proporción de multas pendientes, pagadas y condonadas."),
-                ("🥧 Estado de Cuenta de Socios", "Socios habilitados frente a inhabilitados por deuda."),
-            ],
-            2: [
-                ("🥧 Participación por Libro", "Participación de cada obra en el total de solicitudes inter-sedes."),
-            ],
-            3: [
-                ("🥧 Disponibilidad Global", "Ejemplares disponibles frente a no disponibles en toda la red."),
-                ("🥧 Ejemplares por Sede", "Distribución del inventario total entre las sedes activas."),
-            ],
-        }
-
-        self._indice_actual: Optional[int] = None
         self._crear_interfaz()
 
     def _crear_interfaz(self) -> None:
@@ -89,78 +66,22 @@ class ReportesView(ttk.Frame):
         self.combo_reportes.pack(side="left", padx=10)
         self.combo_reportes.bind("<<ComboboxSelected>>", lambda e: self.ejecutar_reporte())
 
-        # Contenedor del menú de pestañas del informe
+        # Contenedor para la tabla de resultados
         self.table_container = ttk.Frame(self, padding="15 5")
         self.table_container.grid(row=2, column=0, sticky="nsew")
         self.table_container.grid_rowconfigure(0, weight=1)
         self.table_container.grid_columnconfigure(0, weight=1)
 
-        self.notebook_informe: Optional[ttk.Notebook] = None
         self.tabla_actual: Optional[TreeviewTable] = None
         self.ejecutar_reporte()
 
     def ejecutar_reporte(self) -> None:
-        """Ejecuta el informe seleccionado y reconstruye su menú de pestañas (datos + gráficos)."""
+        """Ejecuta el informe seleccionado y actualiza la grilla con sus columnas correspondientes."""
         indice = self.combo_reportes.current()
 
-        # Conservar la pestaña interna activa si se refresca el mismo informe
-        pestana_previa = 0
-        if self.notebook_informe is not None:
-            if indice == self._indice_actual:
-                try:
-                    pestana_previa = self.notebook_informe.index(self.notebook_informe.select())
-                except tk.TclError:
-                    pestana_previa = 0
-            self.notebook_informe.destroy()
+        if self.tabla_actual:
+            self.tabla_actual.destroy()
 
-        self._indice_actual = indice
-
-        self.notebook_informe = ttk.Notebook(self.table_container)
-        self.notebook_informe.grid(row=0, column=0, sticky="nsew")
-
-        # Pestaña 1: datos actuales del informe
-        tab_datos = ttk.Frame(self.notebook_informe, padding=10)
-        tab_datos.grid_rowconfigure(0, weight=1)
-        tab_datos.grid_columnconfigure(0, weight=1)
-        self.notebook_informe.add(tab_datos, text="📋 Datos del informe")
-        self._construir_tabla(tab_datos, indice)
-
-        # Pestañas siguientes: un gráfico de torta por pestaña
-        for titulo, descripcion in self.graficos_por_informe.get(indice, []):
-            tab_grafico = ttk.Frame(self.notebook_informe, padding=20)
-            self.notebook_informe.add(tab_grafico, text=titulo)
-            self._construir_placeholder_grafico(tab_grafico, titulo, descripcion)
-
-        total_tabs = len(self.notebook_informe.tabs())
-        self.notebook_informe.select(pestana_previa if pestana_previa < total_tabs else 0)
-
-    def _construir_placeholder_grafico(self, parent: ttk.Frame, titulo: str, descripcion: str) -> None:
-        """Marcador de posición del gráfico de torta (se implementará a continuación)."""
-        parent.grid_rowconfigure(2, weight=1)
-        parent.grid_columnconfigure(0, weight=1)
-
-        ttk.Label(
-            parent,
-            text=titulo.replace("🥧 ", ""),
-            font=("Segoe UI", 14, "bold"),
-        ).grid(row=0, column=0, sticky="w")
-
-        ttk.Label(
-            parent,
-            text=descripcion,
-            font=("Segoe UI", 10),
-            foreground="#64748B",
-        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
-
-        ttk.Label(
-            parent,
-            text="Gráfico de torta próximamente",
-            font=("Segoe UI", 11, "italic"),
-            foreground="#94A3B8",
-        ).grid(row=2, column=0)
-
-    def _construir_tabla(self, parent: ttk.Frame, indice: int) -> None:
-        """Construye la grilla de datos correspondiente al informe seleccionado."""
         if indice == 0:
             columnas = [
                 ("id_prestamo", "ID", 50),
@@ -208,6 +129,6 @@ class ReportesView(ttk.Frame):
             ]
             datos = self.reporte_service.reporte_disponibilidad_por_sede()
 
-        self.tabla_actual = TreeviewTable(parent, columns=columnas, show_scrollbar_x=True)
+        self.tabla_actual = TreeviewTable(self.table_container, columns=columnas, show_scrollbar_x=True)
         self.tabla_actual.grid(row=0, column=0, sticky="nsew")
         self.tabla_actual.cargar_datos(datos)
