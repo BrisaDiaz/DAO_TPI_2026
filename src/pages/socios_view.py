@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from api.models import Socio, Multa
-from api.dao.socio_dao import SocioDAO
+from api.dao.socio_dao import SocioDAO, es_dni_valido, es_email_valido
 from api.dao.multa_dao import MultaDAO
 from api.services.multa_service import MultaService
 from src.components.treeview_table import TreeviewTable
@@ -80,7 +80,14 @@ class SocioFormModal(tk.Toplevel):
         ttk.Label(form_frame, text="Documento / DNI (*):", font=("Segoe UI", 9, "bold")).grid(
             row=1, column=0, sticky="w", pady=6
         )
-        self.txt_documento = ttk.Entry(form_frame, width=36, font=("Segoe UI", 10))
+        # Filtro de tecleo: solo permite dígitos y hasta 8 caracteres
+        vcmd_dni = (
+            self.register(lambda nuevo: nuevo == "" or (nuevo.isascii() and nuevo.isdigit() and len(nuevo) <= 8)),
+            "%P",
+        )
+        self.txt_documento = ttk.Entry(
+            form_frame, width=36, font=("Segoe UI", 10), validate="key", validatecommand=vcmd_dni
+        )
         self.txt_documento.grid(row=1, column=1, sticky="w", pady=6)
         if self.socio:
             doc_actual = getattr(self.socio, "documento", getattr(self.socio, "dni", ""))
@@ -105,7 +112,7 @@ class SocioFormModal(tk.Toplevel):
             self.txt_apellido.insert(0, self.socio.apellido or "")
 
         # 5. Email
-        ttk.Label(form_frame, text="Email:", font=("Segoe UI", 9)).grid(
+        ttk.Label(form_frame, text="Email (*):", font=("Segoe UI", 9, "bold")).grid(
             row=4, column=0, sticky="w", pady=6
         )
         self.txt_email = ttk.Entry(form_frame, width=36, font=("Segoe UI", 10))
@@ -156,12 +163,33 @@ class SocioFormModal(tk.Toplevel):
         activo = 1 if self.combo_estado.get() == "Habilitado" else 0
 
         # Validaciones obligatorias
-        if not nro_socio or not documento or not nombre or not apellido:
+        if not nro_socio or not documento or not nombre or not apellido or not email:
             messagebox.showwarning(
                 "Datos obligatorios",
-                "Por favor complete los campos obligatorios: Nro. de Socio, Documento, Nombre y Apellido.",
+                "Por favor complete los campos obligatorios: Nro. de Socio, Documento, Nombre, Apellido y Email.",
                 parent=self,
             )
+            return
+
+        # Validar formato de DNI (solo números, 7 u 8 dígitos)
+        if not es_dni_valido(documento):
+            messagebox.showwarning(
+                "Documento inválido",
+                "El DNI debe contener solo números (7 u 8 dígitos), sin puntos ni espacios.",
+                parent=self,
+            )
+            self.txt_documento.focus()
+            return
+
+        # Validar formato de email (requerido para las notificaciones del patrón Observer)
+        if not es_email_valido(email):
+            messagebox.showwarning(
+                "Email inválido",
+                "Ingrese un email válido (ej: usuario@dominio.com). "
+                "Es necesario para enviar notificaciones al socio.",
+                parent=self,
+            )
+            self.txt_email.focus()
             return
 
         # Validar no duplicidad de Nro. de socio
