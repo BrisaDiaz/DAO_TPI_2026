@@ -320,4 +320,20 @@ classDiagram
     Subject <|-- DisponibilidadEjemplarSubject
     Subject o-- Observer
     Observer <|-- SocioObserver
+
+    
+```
+#### C. Máquina de Estados del Remito
+```mermaid
+stateDiagram
+    [*] --> Empaquetado : Creación de Remito
+    
+    Empaquetado --> Despachado : avanzar()
+    
+    Despachado --> Recibido : avanzar()
+    Despachado --> ConIncidencias : reportar_incidencia()
+    
+    ConIncidencias --> Recibido : avanzar()
+    
+    Recibido --> [*]
 ```
